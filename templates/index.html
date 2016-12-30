@@ -1,0 +1,35 @@
+<html>
+  <link rel="stylesheet" href="{{ url_for('camPage.static', filename='index.css') }}">
+  <head>
+    <title>Camera 1</title>
+  </head>
+  <body>
+    <div class="titlebar">
+      <b>Pyledriver Status: </b><span id='state'>{{ state }}</span>
+    </div>
+    <div class="camera_container">
+      <div class="camera">
+        <img id="bg" src="{{ url_for('camPage.videoFeed') }}">
+      </div>
+      <div class="controls">
+        <form action="{{ url_for('camPage.index') }}" method='post' name='framerate'>
+          {{ camForm.hidden_tag() }}
+          <p>Current Framerate: <span id='FPSvalue'>{{ fps }}</span></p>
+          <p>Set Framerate {{ camForm.fps }}</p>
+          <p>{{ camForm.submitFPS }}</p>
+        </form>
+        <form action="{{ url_for('camPage.index') }}" method='post' name='text_to_speech'>
+          {{ ttsForm.hidden_tag() }}
+          <p>Speak your mind</p>
+          <p>{{ ttsForm.tts }}</p>
+          <p>{{ ttsForm.submitTTS }}</p>
+        </form>
+        <form action="{{ url_for('camPage.index') }}" method='post' name='text_to_speech'>
+          {{ ttsForm.hidden_tag() }}
+          <p>If something goes wrong...</p>
+          <p>{{ resetForm.submitReset }}</p>
+        </form>
+      </div>
+    </div>
+  </body>
+</html>
