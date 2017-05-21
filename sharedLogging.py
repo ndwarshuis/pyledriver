@@ -7,7 +7,10 @@ def SlaveLogger(name, level, queue):
 	logger.addHandler(QueueHandler(queue))
 	logger.propagate = False
 	return logger
-	
+
+#TODO: need to add mounting code here for gluster. since this app is the only
+# gluster user, (un)mounting should be handled here instead of by systemd
+
 class MasterLogger():
 	def __init__(self, name, level, queue):
 		consoleFormat = logging.Formatter('[%(name)s] [%(levelname)s] %(message)s')

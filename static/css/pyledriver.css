@@ -1,0 +1,25 @@
+@media (max-width: 767px) {
+	.navbar-text {
+		margin-left: 10px !important;
+	}
+	.form-inline .form-group {
+		display: inline-block;
+		margin-bottom: 0;
+		vertical-align: middle;
+	}
+	.form-inline .form-control {
+		display: inline-block;
+	}
+	.nav > li {
+		display: inline-block;
+	}
+}
+
+.navbar-form {
+	margin-left: 0;
+	margin-right: 0;
+}
+
+.navbar-collapse .navbar-nav.navbar-right:last-child {
+	margin-right: 0;
+}

@@ -3,6 +3,7 @@ from pygame import mixer
 from subprocess import call
 from collections import OrderedDict
 from auxilary import async
+from queue import Queue
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +67,7 @@ class SoundLib:
 	
 	_sentinel = None
 	
-	def __init__(self, ttsQueue):
+	def __init__(self):
 		mixer.pre_init(frequency=44100, size=-16, channels=2, buffer=1024)
 		mixer.init()
 		
@@ -88,7 +89,7 @@ class SoundLib:
 		self.volume = 100
 		self._applyVolumesToSounds(self.volume)
 		
-		self._ttsQueue = ttsQueue
+		self._ttsQueue = Queue()
 		self._stop = threading.Event()
 		self._startMonitor()
 
@@ -101,21 +102,7 @@ class SoundLib:
 		self._applyVolumesToSounds(0)
 	
 	def speak(self, text):
-		basename = hashlib.md5(text.encode()).hexdigest()
-		
-		if basename in self._ttsSounds:
-			self._ttsSounds.move_to_end(basename)
-		else:
-			path = '/tmp/' + basename
-			call(['espeak', '-a180', '-g8', '-p75', '-w', path, text])
-			self._ttsSounds[basename] = TTSSound(path)
-		
-		self._fader(
-			lowerVolume=0.1,
-			totalDuration=self._ttsSounds[basename].get_length()
-		)
-		self._ttsSounds[basename].play()
-		logger.debug('TTS engine received "%s"', text)
+		self._ttsQueue.put_nowait(text)
 
 	@async(daemon=False)
 	def _fader(self, lowerVolume, totalDuration, fadeDuration=0.2, stepSize=5):
@@ -156,6 +143,7 @@ class SoundLib:
 		for name, sound in s.items():
 			sound.set_volume(v)
 
+	# TODO: maybe could simply now that we are not using MP for TTS
 	def _ttsMonitor(self):
 		q = self._ttsQueue
 		has_task_done = hasattr(q, 'task_done')
@@ -164,7 +152,7 @@ class SoundLib:
 				text = self._ttsQueue.get(True)
 				if text is self._sentinel:
 					break
-				self.speak(text)
+				self._playSpeech(text)
 				if has_task_done:
 					q.task_done()
 			except queue.Empty:
@@ -175,12 +163,29 @@ class SoundLib:
 				text = self._ttsQueue.get(False)
 				if text is self._sentinel:
 					break
-				self.speak(text)
+				self._playSpeech(text)
 				if has_task_done:
 					q.task_done()
 			except queue.Empty:
 				break
-					
+
+	def _playSpeech(self, text):
+		basename = hashlib.md5(text.encode()).hexdigest()
+
+		if basename in self._ttsSounds:
+			self._ttsSounds.move_to_end(basename)
+		else:
+			path = '/tmp/' + basename
+			call(['espeak', '-a180', '-g8', '-p75', '-w', path, text])
+			self._ttsSounds[basename] = TTSSound(path)
+
+		self._fader(
+			lowerVolume=0.1,
+			totalDuration=self._ttsSounds[basename].get_length()
+		)
+		self._ttsSounds[basename].play()
+		logger.debug('TTS engine received "%s"', text)
+		
 	def _startMonitor(self):
 		self._thread = t = threading.Thread(target=self._ttsMonitor, daemon=True)
 		t.start()

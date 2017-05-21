@@ -113,6 +113,7 @@ class KeypadListener(Thread):
 		except AttributeError:
 			pass
 			
+# TODO: these are not threadsafe
 # TODO: this code gets really confused if the pipe is deleted
 class PipeListener(Thread):
 	def __init__(self, callback, path):

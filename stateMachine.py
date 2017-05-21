@@ -11,6 +11,7 @@ from notifier import intruderAlert
 from listeners import KeypadListener, PipeListener
 from blinkenLights import Blinkenlights
 from soundLib import SoundLib
+from webInterface import initWebInterface
 
 logger = logging.getLogger(__name__)
 
@@ -36,17 +37,17 @@ class State:
 		
 	def entry(self):
 		logger.debug('entering ' + self.name)
-		#~ if self.sound:
-			#~ self.sound.play()
-		#~ self.stateMachine.LED.blink = self.blinkLED
-		#~ self.stateMachine.keypadListener.resetBuffer()
+		if self.sound:
+			self.sound.play()
+		self.stateMachine.LED.blink = self.blinkLED
+		self.stateMachine.keypadListener.resetBuffer()
 		for c in self.entryCallbacks:
 			c()
 		
 	def exit(self):
 		logger.debug('exiting ' + self.name)
-		#~ if self.sound:
-			#~ self.sound.stop()
+		if self.sound:
+			self.sound.stop()
 		for c in self.exitCallbacks:
 			c()
 
@@ -64,9 +65,8 @@ class State:
 		return hash(self.name)
 
 class StateMachine:
-	def __init__(self, camera, ttsQueue, sharedState):
-		self.sharedState = sharedState
-		self.soundLib = SoundLib(ttsQueue)
+	def __init__(self):
+		self.soundLib = SoundLib()
 		self._cfg = ConfigFile('config.yaml')
 		
 		def startTimer(t, sound):
@@ -131,7 +131,7 @@ class StateMachine:
 		
 		self._lock = Lock()
 		
-		#~ self.LED = Blinkenlights(17)
+		self.LED = Blinkenlights(17)
 		
 		def action():
 			if self.currentState == self.armed:
@@ -142,17 +142,17 @@ class StateMachine:
 				self.selectState(SIGNALS.TRIGGER)
 				while GPIO.input(pin):
 					path = '/mnt/glusterfs/pyledriver/images/%s.jpg'
-					with open(path % datetime.now(), 'wb') as f:
-						f.write(camera.getFrame())
+					#~ with open(path % datetime.now(), 'wb') as f:
+						#~ f.write(camera.getFrame())
 					time.sleep(0.2)
 
-		#~ setupMotionSensor(5, 'Nate\'s room', action)
-		#~ setupMotionSensor(19, 'front door', action)
-		#~ setupMotionSensor(26, 'Laura\'s room', action)
-		#~ setupMotionSensor(6, 'deck window', partial(actionVideo, 6))
-		#~ setupMotionSensor(13, 'kitchen bar', partial(actionVideo, 13))
+		setupMotionSensor(5, 'Nate\'s room', action)
+		setupMotionSensor(19, 'front door', action)
+		setupMotionSensor(26, 'Laura\'s room', action)
+		setupMotionSensor(6, 'deck window', partial(actionVideo, 6))
+		setupMotionSensor(13, 'kitchen bar', partial(actionVideo, 13))
 		
-		#~ setupDoorSensor(22, action, self.soundLib.soundEffects['door'])
+		setupDoorSensor(22, action, self.soundLib.soundEffects['door'])
 		
 		secretTable = {
 			"dynamoHum": 	partial(self.selectState, SIGNALS.DISARM),
@@ -160,35 +160,36 @@ class StateMachine:
 			"imTheSlime": 	partial(self.selectState, SIGNALS.INSTANT_ARM)
 		}
 		
-		#~ def secretCallback(secret, logger):
-			#~ if secret in secretTable:
-				#~ secretTable[secret]()
-				#~ logger.debug('Secret pipe listener received: \"%s\"', secret)
-			#~ elif logger:
-				#~ logger.error('Secret pipe listener received invalid secret')
-					
-		#~ self.secretListener = PipeListener(
-			#~ callback = secretCallback,
-			#~ path = '/tmp/secret'
-		#~ )
-		
-		#~ def ttsCallback(text, logger):
-			#~ self.soundLib.speak(text)
-			#~ logger.debug('TTS pipe listener received text: \"%s\"', text)
-		
-		#~ self.ttsListener = PipeListener(
-			#~ callback = ttsCallback,
-			#~ path = '/tmp/tts'
-		#~ )
-		#~ self.keypadListener = KeypadListener(
-			#~ stateMachine = self,
-			#~ callbackDisarm = partial(self.selectState, 'disarm'),
-			#~ callbackArm = partial(self.selectState, 'arm'),
-			#~ soundLib = self.soundLib,
-			#~ passwd = '5918462'
-		#~ )
-		
-		self.sharedState['name'] = self.currentState.name
+		def secretCallback(secret, logger):
+			if secret in secretTable:
+				secretTable[secret]()
+				logger.debug('Secret pipe listener received: \"%s\"', secret)
+			elif logger:
+				logger.error('Secret pipe listener received invalid secret')
+	
+		self.secretListener = PipeListener(
+			callback = secretCallback,
+			path = '/tmp/secret'
+		)
+
+		def ttsCallback(text, logger):
+			self.soundLib.speak(text)
+			logger.debug('TTS pipe listener received text: \"%s\"', text)
+
+		self.ttsListener = PipeListener(
+			callback = ttsCallback,
+			path = '/tmp/tts'
+		)
+		self.keypadListener = KeypadListener(
+			stateMachine = self,
+			callbackDisarm = partial(self.selectState, 'disarm'),
+			callbackArm = partial(self.selectState, 'arm'),
+			soundLib = self.soundLib,
+			passwd = '5918462'
+		)
+
+		initWebInterface(self)
+
 		self.currentState.entry()
 
 	def selectState(self, signal):
@@ -201,7 +202,6 @@ class StateMachine:
 				self.currentState.entry()
 		finally:
 			self._lock.release()
-			self.sharedState['name'] = self.currentState.name
 			
 			self._cfg['state'] = self.currentState.name
 			self._cfg.sync()
@@ -209,22 +209,14 @@ class StateMachine:
 			logger.info('state changed to %s', self.currentState)
 		
 	def __del__(self):
-		try:
-			self.LED.__del__()
-		except AttributeError:
-			pass
+		if hasattr(self, 'LED'):
+				self.LED.__del__()
 			
-		try:
+		if hasattr(self, 'soundLib'):
 			self.soundLib.__del__()
-		except AttributeError:
-			pass
 			
-		try:
+		if hasattr(self, 'pipeListener'):
 			self.pipeListener.__del__()
-		except AttributeError:
-			pass
 		
-		try:
+		if hasattr(self, 'keypadListener'):
 			self.keypadListener.__del__()
-		except AttributeError:
-			pass

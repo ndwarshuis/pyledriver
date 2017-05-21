@@ -3,18 +3,13 @@
 import sys, os, time, signal, traceback
 import RPi.GPIO as GPIO
 from queue import Queue
-from multiprocessing.managers import BaseManager, DictProxy
+from multiprocessing.managers import BaseManager
 
 def clean():
 	GPIO.cleanup()
 
 	try:
 		stateMachine.__del__()
-	except NameError:
-		pass
-		
-	try:
-		webInterface.stop() # Kill process 1
 	except NameError:
 		pass
 		
@@ -38,11 +33,7 @@ class ResourceManager(BaseManager):
 	def __init__(self):
 		super().__init__()
 		
-		from camera import Camera
-		from microphone import Microphone
-		self.register('Camera', Camera)
 		self.register('Queue', Queue)
-		self.register('Dict', dict, DictProxy)
 		
 	def __del__(self):
 		self.shutdown()
@@ -58,22 +49,18 @@ if __name__ == '__main__':
 		manager.start() # Child process 1
 		
 		loggerQueue = manager.Queue() # used to buffer logs
-		camera = manager.Camera(loggerQueue)
-		stateDict = manager.Dict() # used to hold state info
 		ttsQueue = manager.Queue() # used as buffer for TTS Engine
 		
 		from sharedLogging import MasterLogger
 		logger = MasterLogger(__name__, 'DEBUG', loggerQueue)
 
 		from notifier import criticalError
-
+		
 		from stateMachine import StateMachine
-		stateMachine = StateMachine(camera, ttsQueue, stateDict)
+		stateMachine = StateMachine()
 		
-		from webInterface import WebInterface
-		webInterface = WebInterface(camera, stateDict, ttsQueue, loggerQueue)
-		webInterface.start() # Child process 2
-		
+		# TODO: segfaults are annoying :(
+		#~ signal.signal(signal.SIGSEGV, sig_handler)
 		signal.signal(signal.SIGTERM, sigtermHandler)
 
 		while 1:
