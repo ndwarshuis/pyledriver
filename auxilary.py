@@ -18,6 +18,38 @@ class ConfigFile():
 		with open(self._path, 'w') as f:
 			yaml.dump(self._dict, f, default_flow_style=False)
 
+class async:
+	def __init__(self, daemon=False):
+		self._daemon = daemon
+
+	def __call__(self, f):
+		def wrapper(*args, **kwargs):
+			t = Thread(target=f, daemon=self._daemon, args=args, kwargs=kwargs)
+			t.start()
+		return wrapper
+
+class CountdownTimer(Thread):
+	def __init__(self, countdownSeconds, action, sound=None):
+		self._stopper = Event()
+
+		def countdown():
+			for i in range(countdownSeconds, 0, -1):
+				if self._stopper.isSet():
+					return None
+				if sound and i < countdownSeconds:
+					sound.play()
+				time.sleep(1)
+			action()
+
+		super().__init__(target=countdown, daemon=True)
+		self.start()
+
+	def stop(self):
+		self._stopper.set()
+
+	def __del__(self):
+		self.stop()
+
 def freeBusyPath(path, logger=None):
 	# check if any other processes are using file path
 	# if found, politely ask them to exit, else nuke them
@@ -50,34 +82,5 @@ def freeBusyPath(path, logger=None):
 				logger.warning('Failed to terminate PID %s. Sending SIGKILL', p.pid)
 			p.kill()
 
-class async:
-	def __init__(self, daemon=False):
-		self._daemon = daemon
-		
-	def __call__(self, f):
-		def wrapper(*args, **kwargs):
-			t = Thread(target=f, daemon=self._daemon, args=args, kwargs=kwargs)
-			t.start()
-		return wrapper
-
-class CountdownTimer(Thread):
-	def __init__(self, countdownSeconds, action, sound=None):
-		self._stopper = Event()
-		
-		def countdown():
-			for i in range(countdownSeconds, 0, -1):
-				if self._stopper.isSet():
-					return None
-				if sound and i < countdownSeconds:
-					sound.play()
-				time.sleep(1)
-			action()
-		
-		super().__init__(target=countdown, daemon=True)
-		self.start()
-		
-	def stop(self):
-		self._stopper.set()
-		
-	def __del__(self):
-		self.stop()
+def fallbackLogger(module, loglevel, msg):
+	print('[{}] [{}] Logger not initialized, this will only go to console:\n{}'.format(module, loglevel, msg))

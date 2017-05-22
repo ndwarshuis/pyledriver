@@ -1,6 +1,8 @@
-import logging, os
+import logging, os, sys
 from subprocess import run, PIPE, CalledProcessError
 from logging.handlers import TimedRotatingFileHandler, QueueListener, QueueHandler
+
+from auxilary import fallbackLogger
 
 def SlaveLogger(name, level, queue):
 	logger = logging.getLogger(name)
@@ -29,8 +31,12 @@ class GlusterFS():
 		try:
 			run(cmd, check=True, stdout=PIPE, stderr=PIPE)
 		except CalledProcessError as e:
-			print(e.stderr.decode('ascii').rstrip())
-		
+			# we assume that this will only get thrown when the logger is not
+			# active, so use fallback to get the explicit mount errors
+			stderr=e.stderr.decode('ascii').rstrip()
+			fallbackLogger(__name__, 'CRITICAL', stderr)
+			sys.exit()
+
 class MasterLogger():
 	def __init__(self, name, level, queue):
 		mountpoint = '/mnt/glusterfs/pyledriver'
