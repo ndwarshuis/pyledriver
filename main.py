@@ -36,7 +36,7 @@ def clean():
 
 def sigtermHandler(signum, stackFrame):
 	logger.info('Caught SIGTERM')
-	exit()
+	raise SystemExit
 
 class ResourceManager(BaseManager):
 	def __init__(self):

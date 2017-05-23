@@ -1,4 +1,4 @@
-import logging, os, sys
+import logging, os
 from subprocess import run, PIPE, CalledProcessError
 from logging.handlers import TimedRotatingFileHandler, QueueListener, QueueHandler
 
@@ -43,7 +43,7 @@ class GlusterFS():
 			# active, so use fallback to get the explicit mount errors
 			stderr=e.stderr.decode('ascii').rstrip()
 			fallbackLogger(__name__, 'CRITICAL', stderr)
-			sys.exit()
+			raise SystemExit
 
 class MasterLogger():
 	def __init__(self, name, level, queue):
@@ -63,8 +63,9 @@ class MasterLogger():
 		if not os.path.exists(logdest):
 			os.mkdir(logdest)
 		elif os.path.isfile(logdest):
-			fallbackLogger(__name__, 'CRITICAL', '{} is present but is a file (vs a directory). Please (re)move this file to prevent data loss'.format(logdest))
-			sys.exit()
+			fallbackLogger(__name__, 'CRITICAL', '{} is present but is a file (vs a directory). ' \
+				'Please (re)move this file to prevent data loss'.format(logdest))
+			raise SystemExit
 		
 		self.rotatingFile = TimedRotatingFileHandler(logdest + '/pyledriver-log', when='midnight')
 		self.rotatingFile.setFormatter(fileFormat)
