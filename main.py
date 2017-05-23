@@ -1,6 +1,6 @@
 #! /bin/python
 
-import sys, os, time, signal, traceback
+import os, time, signal, traceback
 import RPi.GPIO as GPIO
 from queue import Queue
 from multiprocessing.managers import BaseManager
