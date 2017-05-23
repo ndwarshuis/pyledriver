@@ -12,17 +12,25 @@ def SlaveLogger(name, level, queue):
 	return logger
 
 class GlusterFS():
-	def __init__(self, server, volume, mountpoint):
-		self.server = server
-		self.volume = volume
-		
+	def __init__(self, server, volume, mountpoint, options=None):
 		if not os.path.exists(mountpoint):
 			raise FileNotFoundError
 			
 		self.mountpoint = mountpoint
+		self.server = server
+		self.volume = volume
+		self.options = options
 	
 	def mount(self):
-		self._run(['mount', '-t', 'glusterfs', self.server + ':/' + self.volume, self.mountpoint])
+		if os.path.ismount(self.mountpoint):
+			# NOTE: this assumes that the already-mounted device is the one intended
+			fallbackLogger(__name__, 'WARNING', 'Device already mounted at {}'.format(self.mountpoint))
+		else:
+			dst = self.server + ':/' + self.volume
+			cmd = ['mount', '-t', 'glusterfs', dst, self.mountpoint]
+			if self.options:
+				cmd[1:1] = ['-o', self.options]
+			self._run(cmd)
 	
 	def unmount(self):
 		self._run(['umount', self.mountpoint])
@@ -41,7 +49,7 @@ class MasterLogger():
 	def __init__(self, name, level, queue):
 		mountpoint = '/mnt/glusterfs/pyledriver'
 		
-		self.fs = GlusterFS('192.168.11.39', 'pyledriver', mountpoint)
+		self.fs = GlusterFS('192.168.11.39', 'pyledriver', mountpoint, 'backupvolfile-server=192.168.11.48')
 		self.fs.mount()
 		
 		consoleFormat = logging.Formatter('[%(name)s] [%(levelname)s] %(message)s')
