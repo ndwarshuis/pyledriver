@@ -58,8 +58,15 @@ class MasterLogger():
 		console = logging.StreamHandler()
 		console.setFormatter(consoleFormat)
 		
-		# TODO: check that 'logs' actually exists in the mp
-		self.rotatingFile = TimedRotatingFileHandler(mountpoint + '/logs/pyledriver-log', when='midnight')
+		logdest = mountpoint + '/logs'
+		
+		if not os.path.exists(logdest):
+			os.mkdir(logdest)
+		elif os.path.isfile(logdest):
+			fallbackLogger(__name__, 'CRITICAL', '{} is present but is a file (vs a directory). Please (re)move this file to prevent data loss'.format(logdest))
+			sys.exit()
+		
+		self.rotatingFile = TimedRotatingFileHandler(logdest + '/pyledriver-log', when='midnight')
 		self.rotatingFile.setFormatter(fileFormat)
 		
 		logging.basicConfig(level=getattr(logging, level), handlers=[QueueHandler(queue)])
