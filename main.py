@@ -8,7 +8,7 @@ from multiprocessing.managers import BaseManager
 from auxilary import fallbackLogger
 
 def printTrace(t):
-	fallbackLogger(__name__, 'CRITICAL', t)
+	fallbackLogger(__name__, 'CRITICAL', '\n' + t)
 
 def clean():
 	GPIO.cleanup()

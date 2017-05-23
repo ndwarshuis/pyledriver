@@ -83,4 +83,4 @@ def freeBusyPath(path, logger=None):
 			p.kill()
 
 def fallbackLogger(module, loglevel, msg):
-	print('[{}] [{}] Logger not initialized, this will only go to console:\n{}'.format(module, loglevel, msg))
+	print('[{}] [{}] [FALLBACK LOGGER]: {}'.format(module, loglevel, msg))
