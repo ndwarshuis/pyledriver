@@ -1,9 +1,11 @@
 import logging
-from auxilary import async
+from subprocess import check_output, CalledProcessError
 from flask import Flask, render_template, Response, Blueprint, redirect, url_for
 from flask_wtf import FlaskForm
 from wtforms.fields import StringField, SubmitField
 from wtforms.validators import InputRequired
+
+from auxilary import async
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +20,10 @@ class TTSForm(FlaskForm):
 # TODO: fix random connection fails (might be an nginx thing)
 
 @async(daemon=True)
+def _runApp(a):
+	logger.info('Starting web interface')
+	a.run(debug=False, threaded=True)
+
 def initWebInterface(stateMachine):
 	siteRoot = Blueprint('siteRoot', __name__, static_folder='static', static_url_path='')
 
@@ -28,7 +34,6 @@ def initWebInterface(stateMachine):
 		
 		if ttsForm.validate_on_submit() and ttsForm.submitTTS.data:
 			stateMachine.soundLib.speak(ttsForm.tts.data)
-			#~ ttsQueue.put_nowait(ttsForm.tts.data)
 			return redirect(url_for('siteRoot.index'))
 
 		return render_template(
@@ -37,12 +42,14 @@ def initWebInterface(stateMachine):
 			state=stateMachine.currentState
 		)
 
+	try:
+		check_output(['pidof', 'janus'])
+	except CalledProcessError:
+		logger.critical('Janus not running. Aborting')
+		raise SystemExit
+
 	app = Flask(__name__)
 	app.secret_key = '3276d68dac56985bea352325125641ff'
 	app.register_blueprint(siteRoot, url_prefix='/pyledriver')
-
-	# TODO: not sure exactly how threaded=True works, intended to enable
-	# multiple connections. May want to use something more robust w/ camera
-	# see here: https://blog.miguelgrinberg.com/post/video-streaming-with-flask
-	logger.info('Starting web interface')
-	app.run(debug=False, threaded=True)
+	
+	_runApp(app)
