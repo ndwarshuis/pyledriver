@@ -134,13 +134,14 @@ class StateMachine:
 		self.LED = Blinkenlights(17)
 		
 		def action():
-			if self.currentState == self.armed:
+			if self.currentState == self.states.armed:
 				self.selectState(SIGNALS.TRIGGER)
 
 		def actionVideo(pin):
-			if self.currentState in (self.armed, self.armedCountdown, self.triggered):
+			if self.currentState in (self.states.armed, self.states.armedCountdown, self.states.triggered):
 				self.selectState(SIGNALS.TRIGGER)
 				while GPIO.input(pin):
+					# TODO: check that this path exists
 					path = '/mnt/glusterfs/pyledriver/images/%s.jpg'
 					#~ with open(path % datetime.now(), 'wb') as f:
 						#~ f.write(camera.getFrame())
