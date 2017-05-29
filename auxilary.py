@@ -1,4 +1,4 @@
-import time, psutil, yaml
+import time, psutil, yaml, os
 from subprocess import check_output, DEVNULL, CalledProcessError
 from threading import Thread, Event
 
@@ -81,6 +81,14 @@ def freeBusyPath(path, logger=None):
 			if logger:
 				logger.warning('Failed to terminate PID %s. Sending SIGKILL', p.pid)
 			p.kill()
+
+# crude way to 'unplug and plug back in' for USB device
+def resetUSBDevice(device):
+	devpath = os.path.join('/sys/bus/usb/devices/' + device + '/authorized')
+	with open(devpath, 'w') as f:
+		f.write('0')
+	with open(devpath, 'w') as f:
+		f.write('1')
 
 def fallbackLogger(module, loglevel, msg):
 	print('[{}] [{}] [FALLBACK LOGGER]: {}'.format(module, loglevel, msg))
