@@ -2,8 +2,6 @@
 
 import os, time, signal, traceback
 import RPi.GPIO as GPIO
-from queue import Queue
-from multiprocessing.managers import BaseManager
 
 from auxilary import fallbackLogger
 
@@ -18,17 +16,9 @@ def clean():
 	except NameError:
 		pass
 
-	# TODO: this part is really wordy and makes me sad
 	try:
 		logger.info('Terminated root process - PID: %s', os.getpid())
 		logger.stop()
-	except NameError:
-		pass
-	except Exception:
-		printTrace(traceback.format_exc())
-
-	try:
-		manager.__del__() # kill process 2
 	except NameError:
 		pass
 	except Exception:
@@ -38,15 +28,6 @@ def sigtermHandler(signum, stackFrame):
 	logger.info('Caught SIGTERM')
 	raise SystemExit
 
-class ResourceManager(BaseManager):
-	def __init__(self):
-		super().__init__()
-		
-		self.register('Queue', Queue)
-		
-	def __del__(self):
-		self.shutdown()
-
 if __name__ == '__main__':
 	try:
 		os.chdir(os.path.dirname(os.path.realpath(__file__)))
@@ -54,14 +35,8 @@ if __name__ == '__main__':
 		GPIO.setwarnings(False)
 		GPIO.setmode(GPIO.BCM)
 
-		manager = ResourceManager()
-		manager.start() # Child process 1
-		
-		loggerQueue = manager.Queue() # used to buffer logs
-		ttsQueue = manager.Queue() # used as buffer for TTS Engine
-		
 		from sharedLogging import MasterLogger
-		logger = MasterLogger(__name__, 'DEBUG', loggerQueue)
+		logger = MasterLogger(__name__, 'DEBUG')
 
 		from notifier import criticalError
 		

@@ -1,15 +1,8 @@
 import logging, os
 from subprocess import run, PIPE, CalledProcessError
-from logging.handlers import TimedRotatingFileHandler, QueueListener, QueueHandler
+from logging.handlers import TimedRotatingFileHandler
 
 from auxilary import fallbackLogger
-
-def SlaveLogger(name, level, queue):
-	logger = logging.getLogger(name)
-	logger.setLevel(getattr(logging, level))
-	logger.addHandler(QueueHandler(queue))
-	logger.propagate = False
-	return logger
 
 class GlusterFS():
 	def __init__(self, server, volume, mountpoint, options=None):
@@ -46,7 +39,7 @@ class GlusterFS():
 			raise SystemExit
 
 class MasterLogger():
-	def __init__(self, name, level, queue):
+	def __init__(self, name, level):
 		mountpoint = '/mnt/glusterfs/pyledriver'
 		
 		self.fs = GlusterFS('192.168.11.39', 'pyledriver', mountpoint, 'backupvolfile-server=192.168.11.48')
@@ -70,18 +63,14 @@ class MasterLogger():
 		self.rotatingFile = TimedRotatingFileHandler(logdest + '/pyledriver-log', when='midnight')
 		self.rotatingFile.setFormatter(fileFormat)
 		
-		logging.basicConfig(level=getattr(logging, level), handlers=[QueueHandler(queue)])
+		logging.basicConfig(level=getattr(logging, level), handlers=[console, self.rotatingFile])
 		logger = logging.getLogger(name)
 		
 		# since the logger module sucks and doesn't allow me to init
 		# a logger in a subclass, need to "fake" object inheritance
 		for i in ['debug', 'info', 'warning', 'error', 'critical']:
 			setattr(self, i, getattr(logger, i))
-		
-		self.queListener = QueueListener(queue, console, self.rotatingFile)
-		self.queListener.start()
 
 	def stop(self):
-		self.queListener.stop()
 		self.rotatingFile.close() # must close file stream before unmounting
 		self.fs.unmount()
