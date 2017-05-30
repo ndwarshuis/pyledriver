@@ -12,6 +12,7 @@ from listeners import KeypadListener, PipeListener
 from blinkenLights import Blinkenlights
 from soundLib import SoundLib
 from webInterface import initWebInterface
+from stream import initCamera
 
 logger = logging.getLogger(__name__)
 
@@ -132,6 +133,8 @@ class StateMachine:
 		self._lock = Lock()
 		
 		self.LED = Blinkenlights(17)
+		
+		initCamera()
 		
 		def action():
 			if self.currentState == self.states.armed:

@@ -9,10 +9,14 @@
 # - will not require SIGINT (this entire program won't understand them anyways)
 # - no tags or TOCs
 
-from auxilary import async
+from auxilary import async, waitForPath
 from threading import Thread
 
-import gi, time
+import gi, time, logging
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
 gi.require_version('Gst', '1.0')
 gi.require_version('GObject', '2.0')
 
@@ -21,18 +25,18 @@ from gi.repository import Gst, GObject
 class GstException(Exception):
 	pass
 	
-def gstPrintMsg(pName, frmt, *args, sName=None):
+def gstPrintMsg(pName, frmt, *args, level=logging.DEBUG, sName=None):
 	if sName:
-		print('[{}] [{}] '.format(pName, sName) + frmt.format(*args))
+		logger.log(level, '[{}] [{}] '.format(pName, sName) + frmt.format(*args))
 	else:
-		print('[{}] '.format(pName) + frmt.format(*args))
+		logger.log(level, '[{}] '.format(pName) + frmt.format(*args))
 	
-def processErrorMessage(pName, sName, msg):
+def processErrorMessage(pName, sName, msg, level=logging.DEBUG):
 	error, debug = msg.parse_error()
 	if debug:
-		gstPrintMsg(pName, '{} - Additional debug info: {}', error.message, debug, sName=sName)
+		gstPrintMsg(pName, '{} - Additional debug info: {}', error.message, debug, level=level, sName=sName)
 	else:
-		gstPrintMsg(pName, error.message, sName=sName)
+		gstPrintMsg(pName, error.message, level=level, sName=sName)
 	raise GstException(error)
 	
 def linkElements(e1, e2, caps=None):
@@ -76,15 +80,13 @@ def eventLoop(pipeline, block=True, doProgress=False, targetState=Gst.State.PLAY
 		if msgType == Gst.MessageType.REQUEST_STATE:
 			state = msg.parse_request_state()
 			
-			print('Setting state to {} as requested by {}'.format(
-				Gst.Element.get_state_name(state),
-				msgSrcName)
-			)
+			logger.info('Setting state to %s as requested by %s',
+				Gst.Element.get_state_name(state), msgSrcName)
 			
 			pipeline.set_state(state)
 			
 		elif msgType == Gst.MessageType.CLOCK_LOST:
-			print('Clock lost. Getting new one.')
+			logger.debug('Clock lost. Getting new one.')
 			pipeline.set_state(Gst.State.PAUSED)
 			pipeline.set_state(Gst.State.PLAYING)
 			
@@ -105,18 +107,19 @@ def eventLoop(pipeline, block=True, doProgress=False, targetState=Gst.State.PLAY
 			error, debug = msg.parse_info()
 			
 			if debug:
-				gstPrintMsg(pName, debug, sName=msgSrcName)
+				gstPrintMsg(pName, debug, level=logging.INFO, sName=msgSrcName)
 				
 		elif msgType == Gst.MessageType.WARNING:
 			error, debug = msg.parse_warning()
 			
 			if debug:
-				gstPrintMsg(pName, '{} - Additional debug info: {}', error.message, debug, sName=msgSrcName)
+				gstPrintMsg(pName, '{} - Additional debug info: {}', error.message,
+					debug, level=logging.INFO, sName=msgSrcName)
 			else:
-				gstPrintMsg(pName, error.message, sName=msgSrcName)
+				gstPrintMsg(pName, error.message, level=logging.INFO, sName=msgSrcName)
 			
 		elif msgType == Gst.MessageType.ERROR:
-			processErrorMessage(pName, msgSrcName, msg)
+			processErrorMessage(pName, msgSrcName, msg, logging.ERROR)
 			
 		elif msgType == Gst.MessageType.STATE_CHANGED:
 			# we only care about pipeline level state changes
@@ -128,11 +131,13 @@ def eventLoop(pipeline, block=True, doProgress=False, targetState=Gst.State.PLAY
 					prerolled = True
 					
 					if buffering:
-						gstPrintMsg(pName, 'Prerolled, waiting for buffering to finish')
+						gstPrintMsg(pName, 'Prerolled, waiting for buffering to finish',
+							level=logging.INFO)
 						continue
 						
 					if inProgress:
-						gstPrintMsg(pName, 'Prerolled, waiting for progress to finish')
+						gstPrintMsg(pName, 'Prerolled, waiting for progress to finish',
+							level=logging.INFO)
 						continue
 						
 					return
@@ -185,19 +190,19 @@ def eventLoop(pipeline, block=True, doProgress=False, targetState=Gst.State.PLAY
 		# these are things I might not need...
 		elif msgType == Gst.MessageType.STREAM_START:
 			if msgSrc == pipeline:
-				gstPrintMsg(pName, 'Started stream')
+				gstPrintMsg(pName, 'Started stream', level=logging.INFO)
 
-		#~ elif msgType == Gst.MessageType.QOS:
-			#~ frmt, processed, dropped = msg.parse_qos_stats()
-			#~ jitter, proportion, quality = msg.parse_qos_values()
+		elif msgType == Gst.MessageType.QOS:
+			frmt, processed, dropped = msg.parse_qos_stats()
+			jitter, proportion, quality = msg.parse_qos_values()
 
-			#~ gstPrintMsg(
-				#~ pName,
-				#~ 'QOS stats: jitter={} dropped={}',
-				#~ jitter,
-				#~ '-' if frmt == Gst.Format.UNDEFINED else dropped,
-				#~ sName = msgSrcName
-			#~ )
+			gstPrintMsg(
+				pName,
+				'QOS stats: jitter={} dropped={}',
+				jitter,
+				'-' if frmt == Gst.Format.UNDEFINED else dropped,
+				sName = msgSrcName
+			)
 				
 		elif msgType == Gst.MessageType.ELEMENT:
 			gstPrintMsg(pName, 'Unknown message ELEMENT', sName=msgSrcName)
@@ -209,10 +214,10 @@ def eventLoop(pipeline, block=True, doProgress=False, targetState=Gst.State.PLAY
 def startPipeline(pipeline, play=True):
 	pName = pipeline.get_name()
 	stateChange = pipeline.set_state(Gst.State.PAUSED)
-	gstPrintMsg(pName, 'Setting to PAUSED')
+	gstPrintMsg(pName, 'Setting to PAUSED', level=logging.INFO)
 	
 	if stateChange == Gst.StateChangeReturn.FAILURE:
-		gstPrintMsg(pName, 'Cannot set to PAUSE')
+		gstPrintMsg(pName, 'Cannot set to PAUSE', level=logging.INFO)
 		eventLoop(pipeline, block=False, doProgress=False, targetState=Gst.State.VOID_PENDING)
 	# we should always end up here because live
 	elif stateChange == Gst.StateChangeReturn.NO_PREROLL:
@@ -222,7 +227,7 @@ def startPipeline(pipeline, play=True):
 		try:
 			eventLoop(pipeline, block=True, doProgress=True, targetState=Gst.State.PAUSED)
 		except GstException:
-			gstPrintMsg(pName, 'Does not want to preroll')
+			gstPrintMsg(pName, 'Does not want to preroll', level=logging.ERROR)
 			# some cleanup here?
 			raise
 	elif stateChange == Gst.StateChangeReturn.SUCCESS:
@@ -232,19 +237,19 @@ def startPipeline(pipeline, play=True):
 	try:
 		eventLoop(pipeline, block=False, doProgress=True, targetState=Gst.State.PLAYING)
 	except GstException:
-		gstPrintMsg(pName, 'Does not want to preroll')
+		gstPrintMsg(pName, 'Does not want to preroll', level=logging.ERROR)
 		# some cleanup here?
 		raise
 	# ...and end up here
 	else:
 		if play:
-			gstPrintMsg(pName, 'Setting to PLAYING')
+			gstPrintMsg(pName, 'Setting to PLAYING', level=logging.INFO)
 		
 			# and since this will ALWAYS be successful (maybe)...
 			if pipeline.set_state(Gst.State.PLAYING) == Gst.StateChangeReturn.FAILURE:
-				gstPrintMsg(pName, 'Cannot set to PLAYING')
+				gstPrintMsg(pName, 'Cannot set to PLAYING', level=logging.ERROR)
 				err = pipeline.get_bus().pop_filtered(Gst.MessageType.Error)
-				processErrorMessage(pName, msgSrcName, err)
+				processErrorMessage(pName, msgSrcName, err, logging.ERROR)
 		
 		# ...we and end up here and loop until Tool releases their next album
 		try:
@@ -253,8 +258,10 @@ def startPipeline(pipeline, play=True):
 			# cleanup or recover
 			raise
 
-def Camera(video=True, audio=True):
+def initCamera(video=True, audio=True):
 	pipeline = Gst.Pipeline.new("camera")
+	
+	vPath = '/dev/video0'
 	
 	if video:
 		vSource = Gst.ElementFactory.make("v4l2src", "videoSource")
@@ -265,7 +272,7 @@ def Camera(video=True, audio=True):
 		vRTPPay = Gst.ElementFactory.make("rtph264pay", "videoRTPPayload")
 		vRTPSink = Gst.ElementFactory.make("multiudpsink", "videoRTPSink")
 	
-		vSource.set_property('device', '/dev/video0')
+		vSource.set_property('device', vPath)
 		vRTPPay.set_property('config-interval', 1)
 		vRTPPay.set_property('pt', 96)
 		vRTPSink.set_property('clients', '127.0.0.1:9001,127.0.0.1:9002')
@@ -301,6 +308,8 @@ def Camera(video=True, audio=True):
 		linkElements(aScale, aEncode, aCaps)
 		linkElements(aEncode, aRTPPay)
 		linkElements(aRTPPay, aRTPSink)
+		
+	waitForPath(vPath) # video is on usb, so wait until it comes back after we hard reset the bus
 	
 	startPipeline(pipeline)
 
@@ -348,10 +357,6 @@ class FileDump:
 		self.pipeline.set_state(Gst.State.PAUSED)
 		
 Gst.init(None)
-Camera()
-
-while 1:
-	time.sleep(3600)
 
 # this works for file dump
 # gst-launch-1.0 -v udpsrc port=8001 ! application/x-rtp,encoding-name=OPUS,payload=96 ! 
