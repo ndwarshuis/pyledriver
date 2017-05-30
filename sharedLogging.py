@@ -63,7 +63,11 @@ class MasterLogger():
 		self.rotatingFile = TimedRotatingFileHandler(logdest + '/pyledriver-log', when='midnight')
 		self.rotatingFile.setFormatter(fileFormat)
 		
-		logging.basicConfig(level=getattr(logging, level), handlers=[console, self.rotatingFile])
+		self.rootLogger = logging.getLogger()
+		self.rootLogger.addHandler(console)
+		self.rootLogger.addHandler(self.rotatingFile)
+		self.rootLogger.setLevel(getattr(logging, level))
+		
 		logger = logging.getLogger(name)
 		
 		# since the logger module sucks and doesn't allow me to init
