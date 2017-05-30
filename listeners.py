@@ -2,7 +2,7 @@ import logging, os, sys, stat
 from threading import Thread
 from evdev import InputDevice, ecodes
 from select import select
-from auxilary import waitForPath, freeBusyPath
+from auxilary import waitForPath
 import stateMachine
 
 logger = logging.getLogger(__name__)
