@@ -3,12 +3,11 @@
 import os, time, signal, traceback, logging
 import RPi.GPIO as GPIO
 
-from sharedLogging import unmountGluster
+from sharedLogging import unmountGluster # this should be first program module
+from stateMachine import StateMachine
+from auxilary import resetUSBDevice
 
 logger = logging.getLogger(__name__)
-
-def printTrace(t):
-	logger.critical('\n' + t)
 
 def clean():
 	GPIO.cleanup()
@@ -34,10 +33,10 @@ if __name__ == '__main__':
 		
 		GPIO.setwarnings(False)
 		GPIO.setmode(GPIO.BCM)
+		resetUSBDevice('1-1')
 
 		from notifier import criticalError
 		
-		from stateMachine import StateMachine
 		stateMachine = StateMachine()
 
 		# TODO: segfaults are annoying :(
@@ -55,10 +54,7 @@ if __name__ == '__main__':
 		except NameError:
 			pass
 			
-		try:
-			logger.critical(t)
-		except NameError:
-			logger.critical(t)
+		logger.critical(t)
 	
 	finally:
 		clean()
