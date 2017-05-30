@@ -50,12 +50,14 @@ class CountdownTimer(Thread):
 	def __del__(self):
 		self.stop()
 		
-def waitForPath(path, timeout=30):
+def waitForPath(path, logger=None, timeout=30):
 	for i in range(0, timeout):
 		if os.path.exists(path):
 			return
 		time.sleep(1)
-	raise FileNotFoundError('Could not find {} after {} seconds'.format(path, timeout))
+	if logger:
+		logger.error('Could not find %s after %s seconds', path, timeout)
+	raise SystemExit
 
 # we shouldn't need this if we are disabling the usb hub globally and nuking any past connections
 #~ def freeBusyPath(path, logger=None):

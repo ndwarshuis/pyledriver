@@ -2,6 +2,15 @@ import logging, os
 from subprocess import run, PIPE, CalledProcessError
 from logging.handlers import TimedRotatingFileHandler
 
+"""
+Logger conventions
+- CRITICAL: for things that cause crashes. sends email
+- ERROR: for things that cause startup/shutdown issues
+- WARNING: for recoverable issues that may cause future problems
+- INFO: state changes and sensor readings
+- DEBUG: all extraneous crap
+"""
+
 # formats console output depending on whether we have gluster
 def _formatConsole(gluster = False):
 	c = '' if gluster else '[CONSOLE ONLY] '
@@ -33,7 +42,7 @@ class GlusterFSHandler(TimedRotatingFileHandler):
 		if not os.path.exists(logdest):
 			os.mkdir(logdest)
 		elif os.path.isfile(logdest):
-			logger.critical('%s is present but is a file (vs a directory). ' \
+			logger.error('%s is present but is a file (vs a directory). ' \
 				'Please (re)move this file to prevent data loss', logdest)
 			raise SystemExit
 		
@@ -62,10 +71,8 @@ class GlusterFSHandler(TimedRotatingFileHandler):
 		try:
 			run(cmd, check=True, stdout=PIPE, stderr=PIPE)
 		except CalledProcessError as e:
-			# we assume that this will only get thrown when the logger is not
-			# active, so use fallback to get the explicit mount errors
 			stderr = e.stderr.decode('ascii').rstrip()
-			logger.critical(stderr)
+			logger.error(stderr)
 			raise SystemExit
 			
 	def close(self):

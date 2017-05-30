@@ -37,7 +37,7 @@ class State:
 			self.sound = sound
 		
 	def entry(self):
-		logger.debug('entering ' + self.name)
+		logger.info('entering ' + self.name)
 		if self.sound:
 			self.sound.play()
 		self.stateMachine.LED.blink = self.blinkLED
@@ -46,7 +46,7 @@ class State:
 			c()
 		
 	def exit(self):
-		logger.debug('exiting ' + self.name)
+		logger.info('exiting ' + self.name)
 		if self.sound:
 			self.sound.stop()
 		for c in self.exitCallbacks:
@@ -169,7 +169,7 @@ class StateMachine:
 				secretTable[secret]()
 				logger.debug('Secret pipe listener received: \"%s\"', secret)
 			elif logger:
-				logger.error('Secret pipe listener received invalid secret')
+				logger.debug('Secret pipe listener received invalid secret')
 	
 		self.secretListener = PipeListener(
 			callback = secretCallback,
@@ -206,13 +206,13 @@ class StateMachine:
 		
 	def __del__(self):
 		if hasattr(self, 'LED'):
-				self.LED.__del__()
+			self.LED.__del__()
 			
 		if hasattr(self, 'soundLib'):
 			self.soundLib.__del__()
 			
-		if hasattr(self, 'pipeListener'):
-			self.pipeListener.__del__()
+		if hasattr(self, 'secretListener'):
+			self.secretListener.__del__()
 		
 		if hasattr(self, 'keypadListener'):
 			self.keypadListener.__del__()

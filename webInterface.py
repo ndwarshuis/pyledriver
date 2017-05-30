@@ -45,7 +45,7 @@ def initWebInterface(stateMachine):
 	try:
 		check_output(['pidof', 'janus'])
 	except CalledProcessError:
-		logger.critical('Janus not running. Aborting')
+		logger.error('Janus not running. Aborting')
 		raise SystemExit
 
 	app = Flask(__name__)

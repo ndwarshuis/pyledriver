@@ -1,11 +1,13 @@
-# this entire module is lovingly based on the gst-launch tool kindly provided
-# by the gstreamer wizards themselves...with unecessary crap cut out
+"""
+this entire module is lovingly based on the gst-launch tool kindly provided
+by the gstreamer wizards themselves...with unecessary crap cut out
 
-# we make the following assumptions here and optimize as such
-# - all streams are "live"
-# - will not need EOS (no mp4s)
-# - will not require SIGINT (this entire program won't understand them anyways)
-# - no tags or TOCs
+we make the following assumptions here and optimize as such
+- all streams are "live"
+- will not need EOS (no mp4s)
+- will not require SIGINT (this entire program won't understand them anyways)
+- no tags or TOCs
+"""
 
 from auxilary import async, waitForPath
 from threading import Thread

@@ -23,7 +23,7 @@ class KeypadListener(Thread):
 		
 		devPath = '/dev/input/by-id/usb-04d9_1203-event-kbd'
 		
-		waitForPath(devPath)
+		waitForPath(devPath, logger)
 
 		self._dev = InputDevice(devPath)
 		self._dev.grab()
@@ -109,7 +109,7 @@ class KeypadListener(Thread):
 			self._dev.ungrab()
 			logger.debug('Released keypad device')
 		except IOError:
-			logger.debug('Failed to release keypad device')
+			logger.error('Failed to release keypad device')
 		except AttributeError:
 			pass
 			
