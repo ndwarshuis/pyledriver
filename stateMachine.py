@@ -173,14 +173,6 @@ class StateMachine:
 			path = '/tmp/secret'
 		)
 
-		def ttsCallback(text, logger):
-			self.soundLib.speak(text)
-			logger.debug('TTS pipe listener received text: \"%s\"', text)
-
-		self.ttsListener = PipeListener(
-			callback = ttsCallback,
-			path = '/tmp/tts'
-		)
 		self.keypadListener = KeypadListener(
 			stateMachine = self,
 			callbackDisarm = partial(self.selectState, 'disarm'),
@@ -188,7 +180,7 @@ class StateMachine:
 			soundLib = self.soundLib,
 			passwd = '5918462'
 		)
-
+		
 		initWebInterface(self)
 
 		self.currentState.entry()
