@@ -4,6 +4,9 @@ import os, time, signal, traceback
 import RPi.GPIO as GPIO
 
 from auxilary import fallbackLogger
+from sharedLogging import MasterLogger
+
+logger = MasterLogger(__name__, 'DEBUG')
 
 def printTrace(t):
 	fallbackLogger(__name__, 'CRITICAL', '\n' + t)
@@ -18,7 +21,7 @@ def clean():
 
 	try:
 		logger.info('Terminated root process - PID: %s', os.getpid())
-		logger.stop()
+		logger.unmountGluster()
 	except NameError:
 		pass
 	except Exception:
@@ -35,9 +38,8 @@ if __name__ == '__main__':
 		GPIO.setwarnings(False)
 		GPIO.setmode(GPIO.BCM)
 
-		from sharedLogging import MasterLogger
-		logger = MasterLogger(__name__, 'DEBUG')
-
+		logger.mountGluster()
+		
 		from notifier import criticalError
 		
 		from stateMachine import StateMachine
