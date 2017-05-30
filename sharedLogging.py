@@ -1,8 +1,21 @@
-import logging, os, logging.handlers
+import logging, os
 from subprocess import run, PIPE, CalledProcessError
 from logging.handlers import TimedRotatingFileHandler
 
-from auxilary import fallbackLogger
+# formats console output depending on whether we have gluster
+def _formatConsole(rotatingFile=False):
+	c = '' if rotatingFile else '[CONSOLE ONLY] '
+	fmt = logging.Formatter('[%(name)s] [%(levelname)s] ' + c + '%(message)s')
+	console.setFormatter(fmt)	
+
+console = logging.StreamHandler()
+_formatConsole(False)
+
+rootLogger = logging.getLogger()
+rootLogger.setLevel(logging.DEBUG)
+rootLogger.addHandler(console)
+
+logger = logging.getLogger(__name__)
 
 class GlusterFSHandler(TimedRotatingFileHandler):
 	def __init__(self, server, volume, mountpoint, options=None):
@@ -19,8 +32,8 @@ class GlusterFSHandler(TimedRotatingFileHandler):
 		if not os.path.exists(logdest):
 			os.mkdir(logdest)
 		elif os.path.isfile(logdest):
-			fallbackLogger(__name__, 'CRITICAL', '{} is present but is a file (vs a directory). ' \
-				'Please (re)move this file to prevent data loss'.format(logdest))
+			logger.critical('%s is present but is a file (vs a directory). ' \
+				'Please (re)move this file to prevent data loss', logdest)
 			raise SystemExit
 		
 		self._mount()
@@ -33,7 +46,7 @@ class GlusterFSHandler(TimedRotatingFileHandler):
 	def _mount(self):
 		if os.path.ismount(self._mountpoint):
 			# NOTE: this assumes that the already-mounted device is the one intended
-			fallbackLogger(__name__, 'WARNING', 'Device already mounted at {}'.format(self._mountpoint))
+			logger.warning('Device already mounted at {}'.format(self._mountpoint))
 		else:
 			dst = self._server + ':/' + self._volume
 			cmd = ['mount', '-t', 'glusterfs', dst, self._mountpoint]
@@ -51,42 +64,24 @@ class GlusterFSHandler(TimedRotatingFileHandler):
 			# we assume that this will only get thrown when the logger is not
 			# active, so use fallback to get the explicit mount errors
 			stderr = e.stderr.decode('ascii').rstrip()
-			fallbackLogger(__name__, 'CRITICAL', stderr)
+			logger.critical(stderr)
 			raise SystemExit
 			
 	def close(self):
 		TimedRotatingFileHandler.close(self) # must close file stream before unmounting
 		self._unmount()
+	
+gluster = GlusterFSHandler(
+	server = '192.168.11.39',
+	volume = 'pyledriver',
+	mountpoint = '/mnt/glusterfs/pyledriver',
+	options = 'backupvolfile-server=192.168.11.48'
+)
 
-class MasterLogger():
-	def __init__(self, name, level):
-		self._console = logging.StreamHandler()
-		self._formatConsole(False)
-		
-		self._rootLogger = logging.getLogger()
-		self._rootLogger.addHandler(self._console)
-		self._rootLogger.setLevel(getattr(logging, level))
-		
-		# since the logger module sucks and doesn't allow me to init
-		# a logger in a subclass, need to "fake" object inheritance
-		for i in ['debug', 'info', 'warning', 'error', 'critical']:
-			setattr(self, i, getattr(logging.getLogger(name), i))
+_formatConsole(True)
+rootLogger.addHandler(gluster)
 
-	def mountGluster(self):
-		self._gluster = GlusterFSHandler(
-			server = '192.168.11.39',
-			volume = 'pyledriver',
-			mountpoint = '/mnt/glusterfs/pyledriver',
-			options = 'backupvolfile-server=192.168.11.48'
-		)
-		self._formatConsole(True)
-		self._rootLogger.addHandler(self._gluster)
-
-	def unmountGluster(self):
-		self._rootLogger.removeHandler(self._gluster)
-		self._formatConsole(False)
-		
-	def _formatConsole(self, rotatingFile=False):
-		c = '' if rotatingFile else '[CONSOLE ONLY] '
-		fmt = logging.Formatter('[%(name)s] [%(levelname)s] ' + c + '%(message)s')
-		self._console.setFormatter(fmt)	
+def unmountGluster():
+	rootLogger.removeHandler(gluster)
+	_formatConsole(False)
+	

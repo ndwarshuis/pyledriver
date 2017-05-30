@@ -1,15 +1,14 @@
 #! /bin/python
 
-import os, time, signal, traceback
+import os, time, signal, traceback, logging
 import RPi.GPIO as GPIO
 
-from auxilary import fallbackLogger
-from sharedLogging import MasterLogger
+from sharedLogging import unmountGluster
 
-logger = MasterLogger(__name__, 'DEBUG')
+logger = logging.getLogger(__name__)
 
 def printTrace(t):
-	fallbackLogger(__name__, 'CRITICAL', '\n' + t)
+	logger.critical('\n' + t)
 
 def clean():
 	GPIO.cleanup()
@@ -21,11 +20,9 @@ def clean():
 
 	try:
 		logger.info('Terminated root process - PID: %s', os.getpid())
-		logger.unmountGluster()
-	except NameError:
-		pass
+		unmountGluster()
 	except Exception:
-		printTrace(traceback.format_exc())
+		logger.critical(traceback.format_exc())
 
 def sigtermHandler(signum, stackFrame):
 	logger.info('Caught SIGTERM')
@@ -38,8 +35,6 @@ if __name__ == '__main__':
 		GPIO.setwarnings(False)
 		GPIO.setmode(GPIO.BCM)
 
-		logger.mountGluster()
-		
 		from notifier import criticalError
 		
 		from stateMachine import StateMachine
@@ -63,7 +58,7 @@ if __name__ == '__main__':
 		try:
 			logger.critical(t)
 		except NameError:
-			printTrace(t)
+			logger.critical(t)
 	
 	finally:
 		clean()
