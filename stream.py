@@ -1,5 +1,3 @@
-#! /bin/python
-
 # this entire module is lovingly based on the gst-launch tool kindly provided
 # by the gstreamer wizards themselves...with unecessary crap cut out
 
