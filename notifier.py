@@ -29,6 +29,7 @@ def scheduleAction(action):
 		time.sleep(sleepTime.days * 86400 + sleepTime.seconds)
 		action()
 
+# probably an easier way to do this in logging module
 @async(daemon=False)
 def sendEmail(subject, body):
 	msg = MIMEMultipart()

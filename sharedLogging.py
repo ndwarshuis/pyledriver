@@ -3,13 +3,14 @@ from subprocess import run, PIPE, CalledProcessError
 from logging.handlers import TimedRotatingFileHandler
 
 # formats console output depending on whether we have gluster
-def _formatConsole(rotatingFile=False):
-	c = '' if rotatingFile else '[CONSOLE ONLY] '
+def _formatConsole(gluster = False):
+	c = '' if gluster else '[CONSOLE ONLY] '
 	fmt = logging.Formatter('[%(name)s] [%(levelname)s] ' + c + '%(message)s')
 	console.setFormatter(fmt)	
 
+# init console, but don't expect gluster to be here yet
 console = logging.StreamHandler()
-_formatConsole(False)
+_formatConsole(gluster = False)
 
 rootLogger = logging.getLogger()
 rootLogger.setLevel(logging.DEBUG)
@@ -70,7 +71,8 @@ class GlusterFSHandler(TimedRotatingFileHandler):
 	def close(self):
 		TimedRotatingFileHandler.close(self) # must close file stream before unmounting
 		self._unmount()
-	
+
+# ...now activate gluster
 gluster = GlusterFSHandler(
 	server = '192.168.11.39',
 	volume = 'pyledriver',
@@ -78,10 +80,10 @@ gluster = GlusterFSHandler(
 	options = 'backupvolfile-server=192.168.11.48'
 )
 
-_formatConsole(True)
+_formatConsole(gluster = True)
 rootLogger.addHandler(gluster)
 
+# this should only be called at the end to clean up
 def unmountGluster():
 	rootLogger.removeHandler(gluster)
-	_formatConsole(False)
-	
+	_formatConsole(gluster = False)
