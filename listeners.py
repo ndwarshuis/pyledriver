@@ -2,7 +2,7 @@ import logging, os, sys, stat
 from threading import Thread
 from evdev import InputDevice, ecodes
 from select import select
-from auxilary import freeBusyPath
+from auxilary import waitForPath, freeBusyPath
 import stateMachine
 
 logger = logging.getLogger(__name__)
@@ -22,9 +22,9 @@ class KeypadListener(Thread):
 		}
 		
 		devPath = '/dev/input/by-id/usb-04d9_1203-event-kbd'
-
-		freeBusyPath(devPath, logger)
 		
+		waitForPath(devPath)
+
 		self._dev = InputDevice(devPath)
 		self._dev.grab()
 		

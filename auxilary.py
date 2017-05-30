@@ -49,46 +49,51 @@ class CountdownTimer(Thread):
 
 	def __del__(self):
 		self.stop()
+		
+def waitForPath(path, timeout=30):
+	for i in range(0, timeout):
+		if os.path.exists(path):
+			return
+		time.sleep(1)
+	raise FileNotFoundError('Could not find {} after {} seconds'.format(path, timeout))
 
-def freeBusyPath(path, logger=None):
-	# check if any other processes are using file path
-	# if found, politely ask them to exit, else nuke them
+# we shouldn't need this if we are disabling the usb hub globally and nuking any past connections
+#~ def freeBusyPath(path, logger=None):
+	#~ # check if any other processes are using file path
+	#~ # if found, politely ask them to exit, else nuke them
 	
-	# NOTE: fuser sends diagnostic info (eg filenames and modes...which we
-	# don't want) to stderr. This is weird, but let's me route to /dev/null
-	# so I don't have to parse it later
-	try:
-		stdout = check_output(['fuser', path], universal_newlines=True, stderr=DEVNULL)
-	except CalledProcessError:
-		logger.debug('%s not in use. Execution may continue', path)
-	else:
-		# assume stdout is one PID first
-		try:
-			processes = [psutil.Process(int(stdout))]
+	#~ # NOTE: fuser sends diagnostic info (eg filenames and modes...which we
+	#~ # don't want) to stderr. This is weird, but let's me route to /dev/null
+	#~ # so I don't have to parse it later
+	#~ try:
+		#~ stdout = check_output(['fuser', path], universal_newlines=True, stderr=DEVNULL)
+	#~ except CalledProcessError:
+		#~ logger.debug('%s not in use. Execution may continue', path)
+	#~ else:
+		#~ # assume stdout is one PID first
+		#~ try:
+			#~ processes = [psutil.Process(int(stdout))]
 		
-		# else assume we have multiple PIDs separated by arbitrary space
-		except ValueError:
-			processes = [psutil.Process(int(s)) for s in stdout.split()]
+		#~ # else assume we have multiple PIDs separated by arbitrary space
+		#~ except ValueError:
+			#~ processes = [psutil.Process(int(s)) for s in stdout.split()]
 
-		for p in processes:
-			if logger:
-				logger.warning('%s in use by PID %s. Sending SIGTERM', path, p.pid)
-			p.terminate()
+		#~ for p in processes:
+			#~ if logger:
+				#~ logger.warning('%s in use by PID %s. Sending SIGTERM', path, p.pid)
+			#~ p.terminate()
 
-		dead, alive = psutil.wait_procs(processes, timeout=10)
+		#~ dead, alive = psutil.wait_procs(processes, timeout=10)
 		
-		for p in alive:
-			if logger:
-				logger.warning('Failed to terminate PID %s. Sending SIGKILL', p.pid)
-			p.kill()
+		#~ for p in alive:
+			#~ if logger:
+				#~ logger.warning('Failed to terminate PID %s. Sending SIGKILL', p.pid)
+			#~ p.kill()
 
-# crude way to 'unplug and plug back in' for USB device
+# crude way to reset USB device, pretty rough but works
 def resetUSBDevice(device):
 	devpath = os.path.join('/sys/bus/usb/devices/' + device + '/authorized')
 	with open(devpath, 'w') as f:
 		f.write('0')
 	with open(devpath, 'w') as f:
 		f.write('1')
-
-def fallbackLogger(module, loglevel, msg):
-	print('[{}] [{}] [FALLBACK LOGGER]: {}'.format(module, loglevel, msg))
