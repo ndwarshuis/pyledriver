@@ -35,8 +35,6 @@ if __name__ == '__main__':
 		GPIO.setmode(GPIO.BCM)
 		resetUSBDevice('1-1')
 
-		from notifier import criticalError
-		
 		stateMachine = StateMachine()
 
 		# TODO: segfaults are annoying :(
@@ -47,14 +45,7 @@ if __name__ == '__main__':
 			time.sleep(31536000)
 
 	except Exception:
-		t = traceback.format_exc()
-
-		try:
-			criticalError(t)
-		except NameError:
-			pass
-			
-		logger.critical(t)
+		logger.critical(traceback.format_exc())
 	
 	finally:
 		clean()

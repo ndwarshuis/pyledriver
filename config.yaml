@@ -1,3 +1,6 @@
-recipientList:
-- natedwarshuis@gmail.com
+gmail:
+  username: natedwarshuis@gmail.com
+  passwd: bwsasfxqjbookmed
+  recipientList:
+  - natedwarshuis@gmail.com
 state: disarmed
