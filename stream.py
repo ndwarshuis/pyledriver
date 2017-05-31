@@ -7,6 +7,9 @@ we make the following assumptions here and optimize as such
 - will not need EOS (no mp4s)
 - will not require SIGINT (this entire program won't understand them anyways)
 - no tags or TOCs
+
+From a logging an error handling standpoint, all 'errors' here are logged as
+'critical' which will shut down the entire program and send an email.
 """
 
 from auxilary import async, waitForPath
@@ -31,21 +34,25 @@ def gstPrintMsg(pName, frmt, *args, level=logging.DEBUG, sName=None):
 	else:
 		logger.log(level, '[{}] '.format(pName) + frmt.format(*args))
 	
-def processErrorMessage(pName, sName, msg, level=logging.DEBUG):
+def processErrorMessage(pName, sName, msg):
 	error, debug = msg.parse_error()
 	if debug:
-		gstPrintMsg(pName, '{} - Additional debug info: {}', error.message, debug, level=level, sName=sName)
+		gstPrintMsg(pName, '{} - Additional debug info: {}', error.message, debug,
+			level=logging.ERROR, sName=sName)
 	else:
-		gstPrintMsg(pName, error.message, level=level, sName=sName)
-	raise GstException(error)
+		gstPrintMsg(pName, error.message, level=logging.ERROR, sName=sName)
+	raise GstException
 	
 def linkElements(e1, e2, caps=None):
 	if caps:
 		if not e1.link_filtered(e2, caps):
-			raise GstException('cannot link \"{}\" to \"{}\" with caps {}'.format(e1.get_name(), e2.get_name(), caps.to_string()))
+			logger.error('cannot link \"%s\" to \"%s\" with caps %s',
+				e1.get_name(), e2.get_name(), caps.to_string())
+			raise SystemExit
 	else:
 		if not e1.link(e2):
-			raise GstException('cannot link \"{}\" to \"{}\"'.format(e1.get_name(), e2.get_name()))
+			logger.error('cannot link \%s\" to \"%s\"', e1.get_name(), e2.get_name())
+			raise SystemExit
 
 def linkTee(tee, *args):
 	i = 0
@@ -114,12 +121,12 @@ def eventLoop(pipeline, block=True, doProgress=False, targetState=Gst.State.PLAY
 			
 			if debug:
 				gstPrintMsg(pName, '{} - Additional debug info: {}', error.message,
-					debug, level=logging.INFO, sName=msgSrcName)
+					debug, level=logging.WARNING, sName=msgSrcName)
 			else:
-				gstPrintMsg(pName, error.message, level=logging.INFO, sName=msgSrcName)
+				gstPrintMsg(pName, error.message, level=logging.WARNING, sName=msgSrcName)
 			
 		elif msgType == Gst.MessageType.ERROR:
-			processErrorMessage(pName, msgSrcName, msg, logging.ERROR)
+			processErrorMessage(pName, msgSrcName, msg)
 			
 		elif msgType == Gst.MessageType.STATE_CHANGED:
 			# we only care about pipeline level state changes
@@ -228,8 +235,7 @@ def startPipeline(pipeline, play=True):
 			eventLoop(pipeline, block=True, doProgress=True, targetState=Gst.State.PAUSED)
 		except GstException:
 			gstPrintMsg(pName, 'Does not want to preroll', level=logging.ERROR)
-			# some cleanup here?
-			raise
+			raise SystemExit
 	elif stateChange == Gst.StateChangeReturn.SUCCESS:
 		gstPrintMsg(pName, 'Is prerolled')
 	
@@ -238,25 +244,23 @@ def startPipeline(pipeline, play=True):
 		eventLoop(pipeline, block=False, doProgress=True, targetState=Gst.State.PLAYING)
 	except GstException:
 		gstPrintMsg(pName, 'Does not want to preroll', level=logging.ERROR)
-		# some cleanup here?
-		raise
+		raise SystemExit
 	# ...and end up here
 	else:
 		if play:
 			gstPrintMsg(pName, 'Setting to PLAYING', level=logging.INFO)
 		
-			# and since this will ALWAYS be successful (maybe)...
+			# ...and since this will ALWAYS be successful...
 			if pipeline.set_state(Gst.State.PLAYING) == Gst.StateChangeReturn.FAILURE:
 				gstPrintMsg(pName, 'Cannot set to PLAYING', level=logging.ERROR)
 				err = pipeline.get_bus().pop_filtered(Gst.MessageType.Error)
-				processErrorMessage(pName, msgSrcName, err, logging.ERROR)
+				processErrorMessage(pName, msgSrcName, err)
 		
-		# ...we and end up here and loop until Tool releases their next album
+		# ...we end up here and loop until Tool releases their next album
 		try:
 			eventLoop(pipeline, block=True, doProgress=False, targetState=Gst.State.PLAYING)
 		except:
-			# cleanup or recover
-			raise
+			raise GstException
 
 def initCamera(video=True, audio=True):
 	pipeline = Gst.Pipeline.new("camera")
