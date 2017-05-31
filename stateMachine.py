@@ -7,7 +7,7 @@ from collections import namedtuple
 
 from auxilary import CountdownTimer, ConfigFile, resetUSBDevice
 from sensors import setupDoorSensor, setupMotionSensor
-from notifier import intruderAlert
+from gmail import intruderAlert
 from listeners import KeypadListener, PipeListener
 from blinkenLights import Blinkenlights
 from soundLib import SoundLib

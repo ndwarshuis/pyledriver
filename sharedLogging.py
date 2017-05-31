@@ -117,7 +117,7 @@ _formatConsole(gluster = True)
 rootLogger.addHandler(gluster)
 
 # 5
-from notifier import gmail, GmailHandler
+from gmail import gmail, GmailHandler
 
 # 6
 gmail = GmailHandler(gmail['username'], gmail['passwd'], gmail['recipientList'],
