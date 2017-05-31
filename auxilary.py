@@ -3,6 +3,9 @@ from subprocess import check_output, DEVNULL, CalledProcessError
 from threading import Thread, Event
 
 class ConfigFile():
+	'''
+	Presents a config yaml file as a dict-like object
+	'''
 	def __init__(self, path):
 		self._path = path
 		with open(self._path, 'r') as f:
@@ -19,6 +22,10 @@ class ConfigFile():
 			yaml.dump(self._dict, f, default_flow_style=False)
 
 class async:
+	'''
+	Wraps any function in a thread and starts the thread. Intended to be used as
+	a decorator
+	'''
 	def __init__(self, daemon=False):
 		self._daemon = daemon
 
@@ -29,6 +36,11 @@ class async:
 		return wrapper
 
 class CountdownTimer(Thread):
+	'''
+	Launches thread which self terminates after some time (given in seconds).
+	Termination triggers some action (a function). Optionally, a sound can be
+	assigned to each 'tick'
+	'''
 	def __init__(self, countdownSeconds, action, sound=None):
 		self._stopper = Event()
 
@@ -51,6 +63,10 @@ class CountdownTimer(Thread):
 		self.stop()
 		
 def waitForPath(path, logger=None, timeout=30):
+	'''
+	Waits for a path to appear. Useful for procfs and sysfs where devices
+	regularly (dis)appear. Timeout given in seconds
+	'''
 	for i in range(0, timeout):
 		if os.path.exists(path):
 			return
@@ -59,8 +75,11 @@ def waitForPath(path, logger=None, timeout=30):
 		logger.error('Could not find %s after %s seconds', path, timeout)
 	raise SystemExit
 
-# crude way to reset USB device, pretty rough but works
 def resetUSBDevice(device):
+	'''
+	Resets a USB device using the de/reauthorization method. This is really
+	crude but works beautifully
+	'''
 	devpath = os.path.join('/sys/bus/usb/devices/' + device + '/authorized')
 	with open(devpath, 'w') as f:
 		f.write('0')
