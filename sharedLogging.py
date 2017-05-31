@@ -1,6 +1,7 @@
 import logging, os
 from subprocess import run, PIPE, CalledProcessError
 from logging.handlers import TimedRotatingFileHandler, SMTPHandler
+from auxilary import mkdirSafe
 
 '''
 Logger conventions
@@ -44,16 +45,10 @@ class GlusterFSHandler(TimedRotatingFileHandler):
 		self._volume = volume
 		self._options = options
 		
-		logdest = mountpoint + '/logs'
-		
-		if not os.path.exists(logdest):
-			os.mkdir(logdest)
-		elif os.path.isfile(logdest):
-			logger.error('%s is present but is a file (vs a directory). ' \
-				'Please (re)move this file to prevent data loss', logdest)
-			raise SystemExit
-		
 		self._mount()
+		
+		logdest = mountpoint + '/logs'
+		mkdirSafe(logdest, logger)
 			
 		super().__init__(logdest + '/pyledriver-log', when='midnight')
 

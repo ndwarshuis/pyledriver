@@ -61,7 +61,19 @@ class CountdownTimer(Thread):
 
 	def __del__(self):
 		self.stop()
-		
+
+def mkdirSafe(path, logger):
+	'''
+	Makes new dir if path does not exist, and aborts program if path exists and
+	path is a file not a dir. Else does nothing
+	'''
+	if not os.path.exists(path):
+		os.mkdir(path)
+	elif os.path.isfile(path):
+		logger.error('%s is present but is a file (vs a directory). ' \
+			'Please (re)move this file to prevent data loss', path)
+		raise SystemExit
+
 def waitForPath(path, logger=None, timeout=30):
 	'''
 	Waits for a path to appear. Useful for procfs and sysfs where devices
