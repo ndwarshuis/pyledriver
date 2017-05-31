@@ -12,10 +12,10 @@ Logger conventions
 
 Init order (very essential)
 1) init console output (this will go to journald) and format as console only
-2) init the module level _logger so we can log anything that happens as we build
+2) init the module level logger so we can log anything that happens as we build
    the other loggers
 3) mount glusterfs, any errors here will go to console output
-4) once gluster is mounted, add to root _logger and remove "console only" warning
+4) once gluster is mounted, add to root logger and remove "console only" warning
    from console
 5) import gmail, this must come here as it uses loggers for some of its setup
 6) init gmail handler
@@ -49,7 +49,7 @@ class GlusterFSHandler(TimedRotatingFileHandler):
 		if not os.path.exists(logdest):
 			os.mkdir(logdest)
 		elif os.path.isfile(logdest):
-			_logger.error('%s is present but is a file (vs a directory). ' \
+			logger.error('%s is present but is a file (vs a directory). ' \
 				'Please (re)move this file to prevent data loss', logdest)
 			raise SystemExit
 		
@@ -63,7 +63,7 @@ class GlusterFSHandler(TimedRotatingFileHandler):
 	def _mount(self):
 		if os.path.ismount(self._mountpoint):
 			# this assumes that the already-mounted device is the one intended
-			_logger.warning('Device already mounted at {}'.format(self._mountpoint))
+			logger.warning('Device already mounted at {}'.format(self._mountpoint))
 		else:
 			dst = self._server + ':/' + self._volume
 			cmd = ['mount', '-t', 'glusterfs', dst, self._mountpoint]
@@ -79,7 +79,7 @@ class GlusterFSHandler(TimedRotatingFileHandler):
 			run(cmd, check=True, stdout=PIPE, stderr=PIPE)
 		except CalledProcessError as e:
 			stderr = e.stderr.decode('ascii').rstrip()
-			_logger.error(stderr)
+			logger.error(stderr)
 			raise SystemExit
 			
 	def close(self):
@@ -102,7 +102,7 @@ rootLogger.setLevel(logging.DEBUG)
 rootLogger.addHandler(console)
 
 # 2
-_logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 # 3
 gluster = GlusterFSHandler(

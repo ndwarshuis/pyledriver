@@ -5,7 +5,7 @@ from datetime import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text  import MIMEText 
 
-_logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 gmail = ConfigFile('config.yaml')['gmail']
 
@@ -20,7 +20,7 @@ def _scheduleAction(action):
 	while 1:
 		nextDate = _getNextDate()
 		sleepTime = nextDate - datetime.today()
-		_logger.info('Next monthly test scheduled at %s (%s)', nextDate, sleepTime)
+		logger.info('Next monthly test scheduled at %s (%s)', nextDate, sleepTime)
 		time.sleep(sleepTime.days * 86400 + sleepTime.seconds)
 		action()
 
@@ -42,14 +42,14 @@ def monthlyTest():
 	subject = 'harrison4hegemon - automated monthly test'
 	body = 'this is an automated message - please do not reply\n\nin the future this may have useful information'
 	sendEmail(gmail['username'], gmail['passwd'], gmail['recipientList'], subject, body)
-	_logger.debug('Sending monthly test to email list')
+	logger.debug('Sending monthly test to email list')
 	
 def intruderAlert():
 	subject = 'harrison4hegemon - intruder detected'
 	body = 'intruder detected - alarm was tripped on ' + time.strftime("%H:%M:%S - %d/%m/%Y")
 	sendEmail(gmail['username'], gmail['passwd'], gmail['recipientList'], subject, body)
-	_logger.info('intruder detected')
-	_logger.debug('Sending intruder alert to email list')
+	logger.info('intruder detected')
+	logger.debug('Sending intruder alert to email list')
 
 class GmailHandler(logging.Handler):
 	'''
