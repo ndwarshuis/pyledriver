@@ -33,6 +33,8 @@ def gstPrintMsg(pName, frmt, *args, level=logging.DEBUG, sName=None):
 		logger.log(level, '[{}] [{}] '.format(pName, sName) + frmt.format(*args))
 	else:
 		logger.log(level, '[{}] '.format(pName) + frmt.format(*args))
+	if level == logging.ERROR:
+		raise GstException
 	
 def processErrorMessage(pName, sName, msg):
 	error, debug = msg.parse_error()
@@ -41,7 +43,6 @@ def processErrorMessage(pName, sName, msg):
 			level=logging.ERROR, sName=sName)
 	else:
 		gstPrintMsg(pName, error.message, level=logging.ERROR, sName=sName)
-	raise GstException
 	
 def linkElements(e1, e2, caps=None):
 	if caps:
