@@ -5,7 +5,6 @@ import RPi.GPIO as GPIO
 
 from sharedLogging import unmountGluster # this should be first program module
 from stateMachine import StateMachine
-from auxilary import resetUSBDevice
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +32,6 @@ if __name__ == '__main__':
 		
 		GPIO.setwarnings(False)
 		GPIO.setmode(GPIO.BCM)
-		resetUSBDevice('1-1')
 
 		stateMachine = StateMachine()
 

@@ -5,7 +5,7 @@ from threading import Lock
 from functools import partial
 from collections import namedtuple
 
-from auxilary import CountdownTimer, ConfigFile
+from auxilary import CountdownTimer, ConfigFile, resetUSBDevice
 from sensors import setupDoorSensor, setupMotionSensor
 from notifier import intruderAlert
 from listeners import KeypadListener, PipeListener
@@ -15,6 +15,8 @@ from webInterface import initWebInterface
 from stream import initCamera
 
 logger = logging.getLogger(__name__)
+
+resetUSBDevice('1-1')
 
 class SIGNALS:
 	ARM = 1
