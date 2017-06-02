@@ -1,11 +1,12 @@
 import RPi.GPIO as GPIO
 import time, logging
-from threading import Thread, Event
+from threading import Event
+from exceptionThreading import ExceptionThread
 from itertools import chain
 
 logger = logging.getLogger(__name__)
 
-class Blinkenlights(Thread):
+class Blinkenlights(ExceptionThread):
 	def __init__(self, pin, cyclePeriod=2):
 		self._stopper = Event()
 		self._pin = pin

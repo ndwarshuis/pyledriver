@@ -1,6 +1,11 @@
-import time, psutil, yaml, os
+'''
+Various helper functions and classes
+'''
+
+import time, yaml, os
 from subprocess import check_output, DEVNULL, CalledProcessError
-from threading import Thread, Event
+from threading import Event
+from exceptionThreading import ExceptionThread
 
 class ConfigFile():
 	'''
@@ -21,21 +26,7 @@ class ConfigFile():
 		with open(self._path, 'w') as f:
 			yaml.dump(self._dict, f, default_flow_style=False)
 
-class async:
-	'''
-	Wraps any function in a thread and starts the thread. Intended to be used as
-	a decorator
-	'''
-	def __init__(self, daemon=False):
-		self._daemon = daemon
-
-	def __call__(self, f):
-		def wrapper(*args, **kwargs):
-			t = Thread(target=f, daemon=self._daemon, args=args, kwargs=kwargs)
-			t.start()
-		return wrapper
-
-class CountdownTimer(Thread):
+class CountdownTimer(ExceptionThread):
 	'''
 	Launches thread which self terminates after some time (given in seconds).
 	Termination triggers some action (a function). Optionally, a sound can be

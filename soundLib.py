@@ -1,9 +1,9 @@
-import logging, os, hashlib, queue, threading, time, psutil
+import logging, os, hashlib, queue, time, psutil
+from threading import Event
+from exceptionThreading import ExceptionThread, async
 from pygame import mixer
 from subprocess import call
 from collections import OrderedDict
-from auxilary import async
-from queue import Queue
 
 logger = logging.getLogger(__name__)
 
@@ -89,8 +89,8 @@ class SoundLib:
 		self.volume = 100
 		self._applyVolumesToSounds(self.volume)
 		
-		self._ttsQueue = Queue()
-		self._stop = threading.Event()
+		self._ttsQueue = queue.Queue()
+		self._stop = Event()
 		self._startMonitor()
 
 	def changeVolume(self, volumeDelta):
@@ -187,7 +187,7 @@ class SoundLib:
 		logger.debug('TTS engine received "%s"', text)
 		
 	def _startMonitor(self):
-		self._thread = t = threading.Thread(target=self._ttsMonitor, daemon=True)
+		self._thread = t = ExceptionThread(target=self._ttsMonitor, daemon=True)
 		t.start()
 		logger.debug('Starting TTS Queue Monitor')
 					

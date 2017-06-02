@@ -16,7 +16,8 @@ import gi, time, os, logging
 from datetime import datetime
 from threading import Thread, Lock
 
-from auxilary import async, waitForPath, mkdirSafe
+from auxilary import waitForPath, mkdirSafe
+from exceptionThreading import async
 from sharedLogging import gluster
 
 logger = logging.getLogger(__name__)

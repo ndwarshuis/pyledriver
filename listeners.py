@@ -1,5 +1,5 @@
 import logging, os, sys, stat
-from threading import Thread
+from exceptionThreading import ExceptionThread
 from evdev import InputDevice, ecodes
 from select import select
 from auxilary import waitForPath
@@ -7,7 +7,7 @@ import stateMachine
 
 logger = logging.getLogger(__name__)
 
-class KeypadListener(Thread):
+class KeypadListener(ExceptionThread):
 	def __init__(self, stateMachine, callbackDisarm, callbackArm, soundLib, passwd):
 		
 		ctrlKeys = { 69: 'NUML', 98: '/', 14: 'BS', 96: 'ENTER'}
@@ -115,7 +115,7 @@ class KeypadListener(Thread):
 			
 # TODO: these are not threadsafe
 # TODO: this code gets really confused if the pipe is deleted
-class PipeListener(Thread):
+class PipeListener(ExceptionThread):
 	def __init__(self, callback, path):
 		self._path = path
 		

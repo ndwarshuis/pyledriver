@@ -5,6 +5,7 @@ import RPi.GPIO as GPIO
 
 from sharedLogging import unmountGluster # this should be first program module
 from stateMachine import StateMachine
+from exceptionThreading import excChildListener, excStopper
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +24,7 @@ def clean():
 		logger.critical(traceback.format_exc())
 
 def sigtermHandler(signum, stackFrame):
+	excStopper.set()
 	logger.info('Caught SIGTERM')
 	raise SystemExit
 
@@ -32,15 +34,14 @@ if __name__ == '__main__':
 		
 		GPIO.setwarnings(False)
 		GPIO.setmode(GPIO.BCM)
-
+		
 		stateMachine = StateMachine()
 
 		# TODO: segfaults are annoying :(
 		#~ signal.signal(signal.SIGSEGV, sig_handler)
 		signal.signal(signal.SIGTERM, sigtermHandler)
 
-		while 1:
-			time.sleep(31536000)
+		excChildListener()
 
 	except Exception:
 		logger.critical(traceback.format_exc())

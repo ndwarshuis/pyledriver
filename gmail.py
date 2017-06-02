@@ -1,5 +1,6 @@
 import logging, time
-from auxilary import async, ConfigFile
+from auxilary import ConfigFile
+from exceptionThreading import async
 from smtplib import SMTP
 from datetime import datetime
 from email.mime.multipart import MIMEMultipart
