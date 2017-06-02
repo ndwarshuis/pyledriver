@@ -1,6 +1,5 @@
 import RPi.GPIO as GPIO
 import time, logging
-from datetime import datetime
 from threading import Lock
 from functools import partial
 from collections import namedtuple
@@ -12,7 +11,7 @@ from listeners import KeypadListener, PipeListener
 from blinkenLights import Blinkenlights
 from soundLib import SoundLib
 from webInterface import initWebInterface
-from stream import initCamera
+from stream import initCamera, FileDump
 
 logger = logging.getLogger(__name__)
 
@@ -142,15 +141,16 @@ class StateMachine:
 			if self.currentState == self.states.armed:
 				self.selectState(SIGNALS.TRIGGER)
 
+		fileDump = FileDump()
+		sensitiveStates = (self.states.armed, self.states.armedCountdown, self.states.triggered)
+
 		def actionVideo(pin):
-			if self.currentState in (self.states.armed, self.states.armedCountdown, self.states.triggered):
+			if self.currentState in sensitiveStates:
 				self.selectState(SIGNALS.TRIGGER)
-				while GPIO.input(pin):
-					# TODO: check that this path exists
-					path = '/mnt/glusterfs/pyledriver/images/%s.jpg'
-					#~ with open(path % datetime.now(), 'wb') as f:
-						#~ f.write(camera.getFrame())
-					time.sleep(0.2)
+				fileDump.addInitiator(pin)
+				while GPIO.input(pin) and self.currentState in sensitiveStates:
+					time.sleep(0.1)
+				fileDump.removeInitiator(pin)
 
 		setupMotionSensor(5, 'Nate\'s room', action)
 		setupMotionSensor(19, 'front door', action)

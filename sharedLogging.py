@@ -40,7 +40,7 @@ class GlusterFSHandler(TimedRotatingFileHandler):
 		if not os.path.exists(mountpoint):
 			raise FileNotFoundError
 			
-		self._mountpoint = mountpoint
+		self.mountpoint = mountpoint
 		self._server = server
 		self._volume = volume
 		self._options = options
@@ -56,18 +56,20 @@ class GlusterFSHandler(TimedRotatingFileHandler):
 		self.setFormatter(fmt)
 
 	def _mount(self):
-		if os.path.ismount(self._mountpoint):
+		if os.path.ismount(self.mountpoint):
 			# this assumes that the already-mounted device is the one intended
-			logger.warning('Device already mounted at {}'.format(self._mountpoint))
+			logger.warning('Device already mounted at {}'.format(self.mountpoint))
 		else:
 			dst = self._server + ':/' + self._volume
-			cmd = ['mount', '-t', 'glusterfs', dst, self._mountpoint]
+			cmd = ['mount', '-t', 'glusterfs', dst, self.mountpoint]
 			if self._options:
 				cmd[1:1] = ['-o', self._options]
 			self._run(cmd)
+		self.isMounted = True
 	
 	def _unmount(self):
-		self._run(['umount', self._mountpoint])
+		self._run(['umount', self.mountpoint])
+		self.isMounted = False
 			
 	def _run(self, cmd):
 		try:
