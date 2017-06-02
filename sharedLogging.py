@@ -1,26 +1,18 @@
-import logging, os
-from subprocess import run, PIPE, CalledProcessError
-from logging.handlers import TimedRotatingFileHandler, SMTPHandler
-from auxilary import mkdirSafe
-
 '''
+Sets up root logger for whole program, including console, gluster, and gmail
+
 Logger conventions
 - CRITICAL: for things that cause crashes. only level with gmail
 - ERROR: for things that cause startup/shutdown issues
 - WARNING: for recoverable issues that may cause future problems
 - INFO: state changes and sensor readings
 - DEBUG: all extraneous crap
-
-Init order (very essential)
-1) init console output (this will go to journald) and format as console only
-2) init the module level logger so we can log anything that happens as we build
-   the other loggers
-3) mount glusterfs, any errors here will go to console output
-4) once gluster is mounted, add to root logger and remove "console only" warning
-   from console
-5) import gmail, this must come here as it uses loggers for some of its setup
-6) init gmail handler
 '''
+
+import logging, os
+from subprocess import run, PIPE, CalledProcessError
+from logging.handlers import TimedRotatingFileHandler, SMTPHandler
+from auxilary import mkdirSafe
 
 def _formatConsole(gluster = False):
 	'''
@@ -88,9 +80,9 @@ class GlusterFSHandler(TimedRotatingFileHandler):
 		self._unmount()
 
 '''
-Init sequence (see above)
+Init sequence (order is very essential)
 '''
-# 1
+# 1) init console output (this will go to journald) and format as console only
 console = logging.StreamHandler()
 _formatConsole(gluster = False)
 
@@ -98,10 +90,10 @@ rootLogger = logging.getLogger()
 rootLogger.setLevel(logging.DEBUG)
 rootLogger.addHandler(console)
 
-# 2
+# 2) init the module level logger so we can log anything that happens as we build the other loggers
 logger = logging.getLogger(__name__)
 
-# 3
+# 3) mount glusterfs, any errors here will go to console output
 gluster = GlusterFSHandler(
 	server = '192.168.11.39',
 	volume = 'pyledriver',
@@ -109,14 +101,14 @@ gluster = GlusterFSHandler(
 	options = 'backupvolfile-server=192.168.11.48'
 )
 
-# 4
-_formatConsole(gluster = True)
+# 4) once gluster is mounted, add to root logger and remove "console only" warning from console
 rootLogger.addHandler(gluster)
+_formatConsole(gluster = True)
 
-# 5
+# 5) import gmail, this must come here as it uses loggers for some of its setup
 from gmail import gmail, GmailHandler
 
-# 6
+# 6) init gmail handler
 gmail = GmailHandler(gmail['username'], gmail['passwd'], gmail['recipientList'],
 	'harrison4hegemon - critical error')
 gmail.setLevel(logging.CRITICAL)
