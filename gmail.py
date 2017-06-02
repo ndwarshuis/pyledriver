@@ -41,13 +41,14 @@ def _sendToGmail(username, passwd, recipiantList, subject, body, server='smtp.gm
 def monthlyTest():
 	subject = 'harrison4hegemon - automated monthly test'
 	body = 'this is an automated message - please do not reply\n\nin the future this may have useful information'
-	sendEmail(gmail['username'], gmail['passwd'], gmail['recipientList'], subject, body)
+	_sendToGmail(gmail['username'], gmail['passwd'], gmail['recipientList'], subject, body)
 	logger.debug('Sending monthly test to email list')
 	
 def intruderAlert():
+	pass
 	subject = 'harrison4hegemon - intruder detected'
 	body = 'intruder detected - alarm was tripped on ' + time.strftime("%H:%M:%S - %d/%m/%Y")
-	sendEmail(gmail['username'], gmail['passwd'], gmail['recipientList'], subject, body)
+	_sendToGmail(gmail['username'], gmail['passwd'], gmail['recipientList'], subject, body)
 	logger.info('intruder detected')
 	logger.debug('Sending intruder alert to email list')
 
