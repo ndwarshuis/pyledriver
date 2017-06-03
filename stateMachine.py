@@ -191,15 +191,12 @@ class StateMachine:
 		self.currentState.entry()
 
 	def selectState(self, signal):
-		self._lock.acquire() # make state transitions threadsafe
-		try:
+		with self._lock
 			nextState = self.currentState.next(signal)
 			if nextState != self.currentState:
 				self.currentState.exit()
 				self.currentState = nextState
 				self.currentState.entry()
-		finally:
-			self._lock.release()
 			
 			self._cfg['state'] = self.currentState.name
 			self._cfg.sync()
