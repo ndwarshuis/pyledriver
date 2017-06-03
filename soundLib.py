@@ -7,9 +7,6 @@ from collections import OrderedDict
 
 logger = logging.getLogger(__name__)
 
-# TODO: figure out why we have buffer underruns
-# TODO: why does the mixer segfault? (at least I think that's the cuprit)
-
 class SoundEffect(mixer.Sound):
 	def __init__(self, path, volume=None, loops=0):
 		super().__init__(path)
