@@ -5,7 +5,7 @@ from functools import partial
 from collections import namedtuple
 
 from auxilary import CountdownTimer, resetUSBDevice
-from config import configFile
+from config import stateFile
 from sensors import setupDoorSensor, setupMotionSensor
 from gmail import intruderAlert
 from listeners import KeypadListener, PipeListener
@@ -110,7 +110,7 @@ class StateMachine:
 			)
 		)
 
-		self.currentState = getattr(self.states, configFile['state'])
+		self.currentState = getattr(self.states, stateFile['state'])
 		
 		self.transitionTable = {
 			(self.states.disarmed, 			SIGNALS.ARM): 			self.states.disarmedCountdown,
@@ -198,7 +198,7 @@ class StateMachine:
 				self.currentState = nextState
 				self.currentState.entry()
 			
-			configFile['state'] = self.currentState.name
+			stateFile['state'] = self.currentState.name
 			
 			logger.info('state changed to %s', self.currentState)
 		
