@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 # TODO: figure out why we have buffer underruns
 # TODO: why does the mixer segfault? (at least I think that's the cuprit)
 
+# TODO: stop all sounds before shutting down mixer
 class SoundEffect(mixer.Sound):
 	def __init__(self, path, volume=None, loops=0):
 		super().__init__(path)
@@ -143,18 +144,15 @@ class SoundLib:
 		for name, sound in s.items():
 			sound.set_volume(v)
 
-	# TODO: maybe could simply now that we are not using MP for TTS
 	def _ttsMonitor(self):
 		q = self._ttsQueue
-		has_task_done = hasattr(q, 'task_done')
 		while not self._stop.isSet():
 			try:
 				text = self._ttsQueue.get(True)
 				if text is self._sentinel:
 					break
 				self._playSpeech(text)
-				if has_task_done:
-					q.task_done()
+				q.task_done()
 			except queue.Empty:
 				pass
 		# There might still be records in the queue.
@@ -164,8 +162,7 @@ class SoundLib:
 				if text is self._sentinel:
 					break
 				self._playSpeech(text)
-				if has_task_done:
-					q.task_done()
+				q.task_done()
 			except queue.Empty:
 				break
 

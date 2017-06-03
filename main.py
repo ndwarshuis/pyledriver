@@ -37,8 +37,6 @@ if __name__ == '__main__':
 		
 		stateMachine = StateMachine()
 
-		# TODO: segfaults are annoying :(
-		#~ signal.signal(signal.SIGSEGV, sig_handler)
 		signal.signal(signal.SIGTERM, sigtermHandler)
 
 		excChildListener()
