@@ -12,6 +12,7 @@ Logger conventions
 import logging, os
 from subprocess import run, PIPE, CalledProcessError
 from logging.handlers import TimedRotatingFileHandler, SMTPHandler
+from config import configFile
 from auxilary import mkdirSafe
 
 def _formatConsole(gluster = False):
@@ -20,7 +21,7 @@ def _formatConsole(gluster = False):
 	'''
 	c = '' if gluster else '[CONSOLE ONLY] '
 	fmt = logging.Formatter('[%(name)s] [%(levelname)s] ' + c + '%(message)s')
-	console.setFormatter(fmt)	
+	console.setFormatter(fmt)
 
 class GlusterFSHandler(TimedRotatingFileHandler):
 	'''
@@ -94,16 +95,15 @@ rootLogger.addHandler(console)
 logger = logging.getLogger(__name__)
 
 # 3) mount glusterfs, any errors here will go to console output
-gluster = GlusterFSHandler(
-	server = '192.168.11.39',
-	volume = 'pyledriver',
-	mountpoint = '/mnt/glusterfs/pyledriver',
-	options = 'backupvolfile-server=192.168.11.48'
-)
+glusterConf = configFile['gluster']
 
-# 4) once gluster is mounted, add to root logger and remove "console only" warning from console
-rootLogger.addHandler(gluster)
-_formatConsole(gluster = True)
+if glusterConf['server'] != 'example.com':
+	gluster = GlusterFSHandler(**glusterConf)
+	rootLogger.addHandler(gluster)
+	_formatConsole(gluster = True)
+else:
+	logger.error('Gluster not configured. Please update config/pyledriver.yaml')
+	raise SystemExit
 
 # 5) import gmail, this must come here as it uses loggers for some of its setup
 from gmail import gmail, GmailHandler
@@ -118,5 +118,8 @@ rootLogger.addHandler(gmail)
 Clean up
 '''
 def unmountGluster():
-	rootLogger.removeHandler(gluster)
-	_formatConsole(gluster = False)
+	try:
+		rootLogger.removeHandler(gluster)
+		_formatConsole(gluster = False)
+	except NameError:
+		pass

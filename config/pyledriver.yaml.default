@@ -3,3 +3,8 @@ gmail:
   recipientList:
   - example@gmail.com
   username: example@gmail.com
+gluster:
+  server: example.com
+  volume: pyledriver
+  mountpoint: /mnt/glusterfs/pyledriver
+  options: backupvolfile-server=example.com
