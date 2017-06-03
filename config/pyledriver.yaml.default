@@ -1,5 +1,5 @@
 gmail:
-  passwd: bwsasfxqjbookmed
+  passwd: ""
   recipientList:
-  - natedwarshuis@gmail.com
-  username: natedwarshuis@gmail.com
+  - example@gmail.com
+  username: example@gmail.com
