@@ -10,7 +10,6 @@ logger = logging.getLogger(__name__)
 # TODO: figure out why we have buffer underruns
 # TODO: why does the mixer segfault? (at least I think that's the cuprit)
 
-# TODO: stop all sounds before shutting down mixer
 class SoundEffect(mixer.Sound):
 	def __init__(self, path, volume=None, loops=0):
 		super().__init__(path)
@@ -196,6 +195,7 @@ class SoundLib:
 		logger.debug('Stopping TTS Queue Monitor')
 
 	def __del__(self):
-		mixer.quit()
 		self._stopMonitor()
 		self._ttsSounds.clear()
+		# this sometimes casues "Fatal Python error: (pygame parachute) Segmentation Fault"
+		mixer.quit()
