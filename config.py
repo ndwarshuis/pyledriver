@@ -2,8 +2,10 @@
 Presents an interface for yaml files as a dict-like object
 '''
 
-import yaml
+import yaml, shutil, logging
 from threading import Lock
+
+logger = logging.getLogger(__name__)
 
 class _ReadOnlyFile():
 	'''
@@ -33,5 +35,13 @@ class _ReadWriteFile(_ReadOnlyFile):
 			with open(self._path, 'w') as f:
 				yaml.dump(self._dict, f, default_flow_style=False)
 
-configFile = _ReadOnlyFile('config/pyledriver.yaml')
-stateFile = _ReadWriteFile('config/state.yaml')
+def _openFile(cls, path):
+	try:
+		return cls(path)
+	except:
+		logger.warn('File %s not found. Copying example', path)
+		shutil.copy(path + '.default', path)
+		return cls(path)
+
+configFile = _openFile(_ReadOnlyFile, 'config/pyledriver.yaml')
+stateFile = _openFile(_ReadWriteFile, 'config/state.yaml')
