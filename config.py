@@ -13,11 +13,30 @@ class _ReadOnlyFile():
 	'''
 	def __init__(self, path):
 		self._path = path
-		with open(self._path, 'r') as f:
-			self._dict = yaml.safe_load(f)
-
+		try:
+			self._load()
+		except FileNotFoundError:
+			logger.warn('File %s not found. Attempting to copy example', self._path)
+			defaultPath = self._path + '.default'
+			
+			try:
+				shutil.copy(defaultPath, self._path)
+			except FileNotFoundError:
+				logger.error('Example file %s not found', defaultPath)
+				raise SystemExit
+				
+			self._path = defaultPath
+			self._load()
+		except yaml.parser.ParserError as e:
+			logger.error(e)
+			raise SystemExit
+			
 	def __getitem__(self, key):
 		return self._dict[key]
+		
+	def _load(self):
+		with open(self._path, 'r') as f:
+			self._dict = yaml.safe_load(f)
 	
 class _ReadWriteFile(_ReadOnlyFile):
 	'''
@@ -35,13 +54,5 @@ class _ReadWriteFile(_ReadOnlyFile):
 			with open(self._path, 'w') as f:
 				yaml.dump(self._dict, f, default_flow_style=False)
 
-def _openFile(cls, path):
-	try:
-		return cls(path)
-	except:
-		logger.warn('File %s not found. Copying example', path)
-		shutil.copy(path + '.default', path)
-		return cls(path)
-
-configFile = _openFile(_ReadOnlyFile, 'config/pyledriver.yaml')
-stateFile = _openFile(_ReadWriteFile, 'config/state.yaml')
+configFile = _ReadOnlyFile('config/pyledriver.yaml')
+stateFile = _ReadWriteFile('config/state.yaml')

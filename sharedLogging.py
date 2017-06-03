@@ -12,7 +12,6 @@ Logger conventions
 import logging, os
 from subprocess import run, PIPE, CalledProcessError
 from logging.handlers import TimedRotatingFileHandler, SMTPHandler
-from config import configFile
 from auxilary import mkdirSafe
 
 def _formatConsole(gluster = False):
@@ -27,7 +26,7 @@ class GlusterFSHandler(TimedRotatingFileHandler):
 	'''
 	Logic to mount timed rotating file within a gluster volume. Note that this
 	class will mount itself automatically. Note that the actual filepaths for
-		logging are hardcoded here
+	logging are hardcoded here
 	'''
 	def __init__(self, server, volume, mountpoint, options=None):
 		if not os.path.exists(mountpoint):
@@ -94,7 +93,8 @@ rootLogger.addHandler(console)
 # 2) init the module level logger so we can log anything that happens as we build the other loggers
 logger = logging.getLogger(__name__)
 
-# 3) mount glusterfs, any errors here will go to console output
+# 3) init glusterfs, any errors here will go to console output
+from config import configFile
 glusterConf = configFile['gluster']
 
 if glusterConf['server'] != 'example.com':
@@ -105,10 +105,10 @@ else:
 	logger.error('Gluster not configured. Please update config/pyledriver.yaml')
 	raise SystemExit
 
-# 5) import gmail, this must come here as it uses loggers for some of its setup
+# 4) import gmail, this must come here as it uses loggers for some of its setup
 from gmail import gmail, GmailHandler
 
-# 6) init gmail handler
+# 5) init gmail handler
 gmail = GmailHandler(gmail['username'], gmail['passwd'], gmail['recipientList'],
 	'harrison4hegemon - critical error')
 gmail.setLevel(logging.CRITICAL)
