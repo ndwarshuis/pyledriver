@@ -1,5 +1,5 @@
 import logging, time
-from auxilary import ConfigFile
+from config import configFile
 from exceptionThreading import async
 from smtplib import SMTP
 from datetime import datetime
@@ -8,7 +8,7 @@ from email.mime.text  import MIMEText
 
 logger = logging.getLogger(__name__)
 
-gmail = ConfigFile('config.yaml')['gmail']
+gmail = configFile['gmail']
 
 def _getNextDate():
 	m = datetime.now().month + 1

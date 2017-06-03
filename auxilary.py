@@ -2,29 +2,10 @@
 Various helper functions and classes
 '''
 
-import time, yaml, os
+import time, os
 from subprocess import check_output, DEVNULL, CalledProcessError
 from threading import Event
 from exceptionThreading import ExceptionThread
-
-class ConfigFile():
-	'''
-	Presents a config yaml file as a dict-like object
-	'''
-	def __init__(self, path):
-		self._path = path
-		with open(self._path, 'r') as f:
-			self._dict = yaml.safe_load(f)
-
-	def __getitem__(self, key):
-		return self._dict[key]
-	
-	def __setitem__(self, key, value):
-		self._dict[key] = value
-		
-	def sync(self):
-		with open(self._path, 'w') as f:
-			yaml.dump(self._dict, f, default_flow_style=False)
 
 class CountdownTimer(ExceptionThread):
 	'''

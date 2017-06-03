@@ -4,7 +4,8 @@ from threading import Lock
 from functools import partial
 from collections import namedtuple
 
-from auxilary import CountdownTimer, ConfigFile, resetUSBDevice
+from auxilary import CountdownTimer, resetUSBDevice
+from config import configFile
 from sensors import setupDoorSensor, setupMotionSensor
 from gmail import intruderAlert
 from listeners import KeypadListener, PipeListener
@@ -69,7 +70,6 @@ class State:
 class StateMachine:
 	def __init__(self):
 		self.soundLib = SoundLib()
-		self._cfg = ConfigFile('config.yaml')
 		
 		def startTimer(t, sound):
 			self._timer = CountdownTimer(t, partial(self.selectState, SIGNALS.TIMOUT), sound)
@@ -110,7 +110,7 @@ class StateMachine:
 			)
 		)
 
-		self.currentState = getattr(self.states, self._cfg['state'])
+		self.currentState = getattr(self.states, configFile['state'])
 		
 		self.transitionTable = {
 			(self.states.disarmed, 			SIGNALS.ARM): 			self.states.disarmedCountdown,
@@ -191,15 +191,14 @@ class StateMachine:
 		self.currentState.entry()
 
 	def selectState(self, signal):
-		with self._lock
+		with self._lock:
 			nextState = self.currentState.next(signal)
 			if nextState != self.currentState:
 				self.currentState.exit()
 				self.currentState = nextState
 				self.currentState.entry()
 			
-			self._cfg['state'] = self.currentState.name
-			self._cfg.sync()
+			configFile['state'] = self.currentState.name
 			
 			logger.info('state changed to %s', self.currentState)
 		
