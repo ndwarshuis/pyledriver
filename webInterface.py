@@ -20,10 +20,6 @@ class TTSForm(FlaskForm):
 # TODO: fix random connection fails (might be an nginx thing)
 
 @async(daemon=True)
-def _runApp(a):
-	logger.info('Starting web interface')
-	a.run(debug=False, threaded=True)
-
 def initWebInterface(stateMachine):
 	siteRoot = Blueprint('siteRoot', __name__, static_folder='static', static_url_path='')
 
@@ -52,4 +48,5 @@ def initWebInterface(stateMachine):
 	app.secret_key = '3276d68dac56985bea352325125641ff'
 	app.register_blueprint(siteRoot, url_prefix='/pyledriver')
 	
-	_runApp(app)
+	logger.info('Starting web interface')
+	app.run(debug=False, threaded=True)
