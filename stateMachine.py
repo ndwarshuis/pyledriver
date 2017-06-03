@@ -78,10 +78,8 @@ class StateMachine:
 			if self._timer.is_alive():
 				self._timer.stop()
 				self._timer = None
-				
-		States = namedtuple('States', ['disarmed', 'disarmedCountdown', 'armed', 'armedCountdown', 'triggered'])
-		
-		self.states = States(
+
+		stateObjs = [
 			State(
 				self,
 				name = 'disarmed',
@@ -108,7 +106,9 @@ class StateMachine:
 				name = 'triggered',
 				entryCallbacks = [intruderAlert]
 			)
-		)
+		]
+		
+		self.states = namedtuple('States', [s.name for s in stateObjs])(*stateObjs)
 
 		self.currentState = getattr(self.states, stateFile['state'])
 		
@@ -203,20 +203,8 @@ class StateMachine:
 			logger.info('state changed to %s', self.currentState)
 		
 	def __del__(self):
-		if hasattr(self, 'LED'):
-			self.LED.__del__()
-			
-		if hasattr(self, 'camera'):
-			self.camera.__del__()
-			
-		if hasattr(self, 'fileDump'):
-			self.fileDump.__del__()
-			
-		if hasattr(self, 'soundLib'):
-			self.soundLib.__del__()
-			
-		if hasattr(self, 'secretListener'):
-			self.secretListener.__del__()
-		
-		if hasattr(self, 'keypadListener'):
-			self.keypadListener.__del__()
+		for i in ['LED', 'camera', 'fileDump', 'soundLib', 'secretListener', 'keypadListener']:
+			try:
+				getattr(self, i).__del__()
+			except AttributeError:
+				pass
