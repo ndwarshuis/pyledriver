@@ -46,7 +46,6 @@ def monthlyTest():
 	logger.debug('Sending monthly test to email list')
 	
 def intruderAlert():
-	pass
 	subject = 'harrison4hegemon - intruder detected'
 	body = 'intruder detected - alarm was tripped on ' + time.strftime("%H:%M:%S - %d/%m/%Y")
 	_sendToGmail(gmail['username'], gmail['passwd'], gmail['recipientList'], subject, body)
