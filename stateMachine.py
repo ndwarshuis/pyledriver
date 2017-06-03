@@ -11,7 +11,7 @@ from listeners import KeypadListener, PipeListener
 from blinkenLights import Blinkenlights
 from soundLib import SoundLib
 from webInterface import initWebInterface
-from stream import initCamera, FileDump
+from stream import Camera, FileDump
 
 logger = logging.getLogger(__name__)
 
@@ -135,22 +135,22 @@ class StateMachine:
 		
 		self.LED = Blinkenlights(17)
 		
-		initCamera()
+		self.camera = Camera()
 		
 		def action():
 			if self.currentState == self.states.armed:
 				self.selectState(SIGNALS.TRIGGER)
 
-		fileDump = FileDump()
+		self.fileDump = FileDump()
 		sensitiveStates = (self.states.armed, self.states.armedCountdown, self.states.triggered)
 
 		def actionVideo(pin):
 			if self.currentState in sensitiveStates:
 				self.selectState(SIGNALS.TRIGGER)
-				fileDump.addInitiator(pin)
+				self.fileDump.addInitiator(pin)
 				while GPIO.input(pin) and self.currentState in sensitiveStates:
 					time.sleep(0.1)
-				fileDump.removeInitiator(pin)
+				self.fileDump.removeInitiator(pin)
 
 		setupMotionSensor(5, 'Nate\'s room', action)
 		setupMotionSensor(19, 'front door', action)
@@ -209,6 +209,12 @@ class StateMachine:
 	def __del__(self):
 		if hasattr(self, 'LED'):
 			self.LED.__del__()
+			
+		if hasattr(self, 'camera'):
+			self.camera.__del__()
+			
+		if hasattr(self, 'fileDump'):
+			self.fileDump.__del__()
 			
 		if hasattr(self, 'soundLib'):
 			self.soundLib.__del__()
