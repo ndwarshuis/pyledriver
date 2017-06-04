@@ -93,7 +93,7 @@ class ThreadedPipeline:
 		pName = self._pipeline.get_name()
 		bus = self._pipeline.get_bus()
 		
-		while self._stopper:
+		while not self._stopper.isSet():
 			# TODO: if we actually want to stop the pipeline asyncronously we
 			# need to post a message on the bus that tells it to stop. Otherwise
 			# it will wait here forever (or will be terminated as a daemon
