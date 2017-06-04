@@ -87,7 +87,7 @@ class SoundLib:
 		self._applyVolumesToSounds(self.volume)
 		
 		self._ttsQueue = queue.Queue()
-		self._stop = Event()
+		self._stopper = Event()
 		self._startMonitor()
 
 	def changeVolume(self, volumeDelta):
@@ -142,7 +142,7 @@ class SoundLib:
 
 	def _ttsMonitor(self):
 		q = self._ttsQueue
-		while not self._stop.isSet():
+		while not self._stopper.isSet():
 			try:
 				text = self._ttsQueue.get(True)
 				if text is self._sentinel:
@@ -185,7 +185,7 @@ class SoundLib:
 		logger.debug('Starting TTS Queue Monitor')
 					
 	def _stopMonitor(self):
-		self._stop.set()
+		self._stopper.set()
 		self._ttsQueue.put_nowait(self._sentinel)
 		self._thread.join()
 		self._thread = None
