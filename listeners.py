@@ -1,4 +1,5 @@
-import logging, os, sys, stat
+import logging, os, sys, stat, time
+from threading import Event
 from exceptionThreading import ExceptionThread
 from evdev import InputDevice, ecodes
 from select import select
@@ -113,32 +114,45 @@ class KeypadListener(ExceptionThread):
 		except AttributeError:
 			pass
 			
-# TODO: these are not threadsafe
-# TODO: this code gets really confused if the pipe is deleted
 class PipeListener(ExceptionThread):
 	def __init__(self, callback, path):
 		self._path = path
+		self._stopper = Event()
+		self._makeFIFO()
 		
+		def listen():
+			while not self._stopper.isSet():
+				try:
+					fd = os.open(self._path, os.O_RDONLY | os.O_NONBLOCK)
+					msg = os.read(fd, 1024).decode().rstrip()
+					if msg != '':
+						callback(msg, logger)
+					os.close(fd)
+				except BlockingIOError:
+					pass
+				except FileNotFoundError:
+					# TODO: this might be easier with a watchdog
+					self._makeFIFO()
+				finally:
+					time.sleep(0.1)
+						
+		super().__init__(target=listen, daemon=False)
+		self.start()
+		logger.debug('Started pipe listener at path %s', self._path)
+
+	def _makeFIFO(self):
 		if os.path.exists(self._path):
 			if not stat.S_ISFIFO(os.stat(self._path)[0]):
+				logger.warn('%s exists but is not a pipe. Deleting', self._path)
 				os.remove(self._path)
 				os.mkfifo(self._path)
 		else:
 			os.mkfifo(self._path)
-		
+			
 		os.chmod(self._path, 0o0777)
 		
-		def listenForSecret():
-			while 1:
-				with open(self._path, 'r') as f:
-					msg = f.readline()[:-1]
-					callback(msg, logger)
-		
-		super().__init__(target=listenForSecret, daemon=True)
-		self.start()
-		logger.debug('Started pipe listener at path %s', self._path)
-		
 	def __del__(self):
+		self._stopper.set()
 		if os.path.exists(self._path):
 			os.remove(self._path)
 		logger.debug('Cleaned up pipe listener at path %s', self._path)
