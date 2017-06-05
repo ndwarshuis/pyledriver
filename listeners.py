@@ -2,7 +2,7 @@ import logging, os, sys, stat
 from exceptionThreading import ExceptionThread
 from evdev import InputDevice, ecodes
 from select import select
-from auxilary import waitForPath
+from auxilary import CountdownTimer, waitForPath
 import stateMachine
 
 logger = logging.getLogger(__name__)
@@ -33,7 +33,7 @@ class KeypadListener(ExceptionThread):
 		wrongPassSound = soundLib.soundEffects['wrongPass']
 		backspaceSound = soundLib.soundEffects['backspace']
 		
-		self.resetBuffer()
+		self._clearBuffer()
 		
 		def getInput():
 			while 1:
@@ -45,6 +45,7 @@ class KeypadListener(ExceptionThread):
 						if event.code in numKeys:
 							if stateMachine.currentState != stateMachine.states.disarmed:
 								self._buf = self._buf + numKeys[event.code]
+								self._startResetCountdown()
 							numKeySound.play()
 
 						# ctrl input
@@ -72,6 +73,8 @@ class KeypadListener(ExceptionThread):
 							# delete last char in buffer
 							elif val == 'BS':
 								self._buf = self._buf[:-1]
+								if self._buf == '':
+									self._stopResetCountdown()
 								backspaceSound.play()
 							
 							# reset buffer
@@ -95,13 +98,27 @@ class KeypadListener(ExceptionThread):
 							ctrlKeySound.play()
 							self._dev.set_led(ecodes.LED_NUML, 0 if soundLib.volume > 0 else 1)
 
-		super().__init__(target=getInput, daemon=True)
-		self.start()
-		logger.debug('Started keypad device')
+		self._resetCountdown = None
 		
-	# TODO: make timer to clear buffer if user doesn't clear it
+		self._listener = ExceptionThread(target=getInput, daemon=True)
+		self._listener.start()
+		logger.debug('Started keypad device')
+
+	def _startResetCountdown(self):
+		print('hey')
+		self._resetCountdown = CountdownTimer(30, self._clearBuffer)
+		
+	def _stopResetCountdown(self):
+		print('ho')
+		if self._resetCountdown is not None and self._resetCountdown.is_alive():
+			self._resetCountdown.stop()
+		self._resetCountdown = None
 
 	def resetBuffer(self):
+		self._stopResetCountdown
+		self._clearBuffer()
+		
+	def _clearBuffer(self):
 		self._buf = ''
 		
 	def __del__(self):
