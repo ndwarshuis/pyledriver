@@ -1,3 +1,7 @@
+'''
+Classes that listen for user input
+'''
+
 import logging, os, sys, stat
 from exceptionThreading import ExceptionThread
 from evdev import InputDevice, ecodes
@@ -7,7 +11,17 @@ import stateMachine
 
 logger = logging.getLogger(__name__)
 
-class KeypadListener(ExceptionThread):
+class KeypadListener():
+	'''
+	Interface for standard numpad device. Capabilities include:
+	- accepting numeric input
+	- volume control
+	- arm/disarm the stateMachine
+	
+	This launches two daemon threads:
+	- input listener that accepts events and reacts in fun ways
+	- countdown timer to reset the input buffer after 30 seconds of inactivity
+	'''
 	def __init__(self, stateMachine, callbackDisarm, callbackArm, soundLib, passwd):
 		
 		ctrlKeys = { 69: 'NUML', 98: '/', 14: 'BS', 96: 'ENTER'}
@@ -105,11 +119,9 @@ class KeypadListener(ExceptionThread):
 		logger.debug('Started keypad device')
 
 	def _startResetCountdown(self):
-		print('hey')
 		self._resetCountdown = CountdownTimer(30, self._clearBuffer)
 		
 	def _stopResetCountdown(self):
-		print('ho')
 		if self._resetCountdown is not None and self._resetCountdown.is_alive():
 			self._resetCountdown.stop()
 		self._resetCountdown = None
@@ -131,30 +143,33 @@ class KeypadListener(ExceptionThread):
 			pass
 			
 class PipeListener(ExceptionThread):
-	
-	_rootDir = '/tmp'
-	_pipeMode = 0o0777
-	
+	'''
+	Creates a pipe in the /tmp directory and listens for input. Primarily
+	meant as a receiver for ssh sessions to echo messages to the stateMachine
+	(aka secrets) that trigger a signal
+	'''
 	def __init__(self, callback, name):
-		self._path = os.path.join(self._rootDir, name)
+		self._path = os.path.join('/tmp', name)
+
+		pipeMode = 0o0777
 		
 		if not os.path.exists(self._path):
-			os.mkfifo(self._path, mode=self._pipeMode)
+			os.mkfifo(self._path, mode=pipeMode)
 		else:
 			st_mode = os.state(self._path).st_mode
 			if not stat.S_ISFIFO(st_mode):
 				os.remove(self._path)
-				os.mkfifo(self._path, mode=self._pipeMode)
-			elif st_mode % 0o10000 != self._pipeMode:
-				os.chmod(self._path, self._pipeMode)
+				os.mkfifo(self._path, mode=pipeMode)
+			elif st_mode % 0o10000 != pipeMode:
+				os.chmod(self._path, pipeMode)
 		
-		def listenForSecret():
+		def listen():
 			while 1:
 				with open(self._path, 'r') as f:
 					msg = f.readline()[:-1]
 					callback(msg, logger)
 		
-		super().__init__(target=listenForSecret, daemon=True)
+		super().__init__(target=listen, daemon=True)
 		self.start()
 		logger.debug('Started pipe listener at path %s', self._path)
 		
