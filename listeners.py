@@ -4,14 +4,9 @@ from exceptionThreading import ExceptionThread
 from evdev import InputDevice, ecodes
 from select import select
 from auxilary import waitForPath
-from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
 import stateMachine
 
 logger = logging.getLogger(__name__)
-
-inotifyLogger = logging.getLogger('watchdog.observers.inotify_buffer')
-inotifyLogger.setLevel(logging.WARNING)
 
 class KeypadListener(ExceptionThread):
 	def __init__(self, stateMachine, callbackDisarm, callbackArm, soundLib, passwd):
@@ -119,21 +114,11 @@ class KeypadListener(ExceptionThread):
 		except AttributeError:
 			pass
 			
-class ActionHandler(FileSystemEventHandler):
-	def __init__(self, action):
-		self._action = action
-
-	def on_any_event(self, event):
-		self._action()
-			
 class PipeListener(ExceptionThread):
-	
-	_rootDir = '/tmp'
-	_pipePermissions = 0o0777
-	
 	def __init__(self, callback, path):
-		self._path = os.path.join(self._rootDir, path)
+		self._path = path
 		self._stopper = Event()
+		self._makeFIFO()
 		
 		def listen():
 			while not self._stopper.isSet():
@@ -146,40 +131,25 @@ class PipeListener(ExceptionThread):
 				except BlockingIOError:
 					pass
 				except FileNotFoundError:
-					pass
+					# TODO: this might be easier with a watchdog
+					self._makeFIFO()
 				finally:
 					time.sleep(0.1)
-		
-		self._observer = Observer()
-		self._handler = ActionHandler(self._makeFIFO)
-		self._observer.schedule(self._handler, path=os.path.dirname(self._path), recursive=False)
-		self._makeFIFO()
-		self._observer.start()
-
+						
 		super().__init__(target=listen, daemon=False)
 		self.start()
 		logger.debug('Started pipe listener at path %s', self._path)
 
 	def _makeFIFO(self):
-		try:
-			st = os.stat(self._path)
-			if not stat.S_ISFIFO(st.st_mode):
-				logger.warn('%s exists but is not a pipe. Deleting and replacing', self._path)
+		if os.path.exists(self._path):
+			if not stat.S_ISFIFO(os.stat(self._path)[0]):
+				logger.warn('%s exists but is not a pipe. Deleting', self._path)
 				os.remove(self._path)
 				os.mkfifo(self._path)
-				os.chmod(self._path, self._pipePermissions)
-			elif st.st_mode % 0o10000 != self._pipePermissions:
-				logger.warn('%s is a valid pipe but has incorrect permissions. Changing to %s',
-					self._path, self._pipePermissions)
-				os.chmod(self._path, self._pipePermissions)
-		except FileNotFoundError:
-			pipeDir = os.path.dirname(self._path)
-			if not os.path.exists(pipeDir):
-				logger.warn('%s does not exist. Creating', pipeDir)
-				os.makedirs(pipeDir)
-			logger.warn('%s does not exist. Creating', self._path)
+		else:
 			os.mkfifo(self._path)
-			os.chmod(self._path, self._pipePermissions)
+			
+		os.chmod(self._path, 0o0777)
 		
 	def __del__(self):
 		self._stopper.set()
