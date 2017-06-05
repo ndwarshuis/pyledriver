@@ -113,20 +113,23 @@ class KeypadListener(ExceptionThread):
 		except AttributeError:
 			pass
 			
-# TODO: these are not threadsafe
-# TODO: this code gets really confused if the pipe is deleted
 class PipeListener(ExceptionThread):
-	def __init__(self, callback, path):
-		self._path = path
+	
+	_rootDir = '/tmp'
+	_pipeMode = 0o0777
+	
+	def __init__(self, callback, name):
+		self._path = os.path.join(self._rootDir, name)
 		
-		if os.path.exists(self._path):
-			if not stat.S_ISFIFO(os.stat(self._path)[0]):
-				os.remove(self._path)
-				os.mkfifo(self._path)
+		if not os.path.exists(self._path):
+			os.mkfifo(self._path, mode=self._pipeMode)
 		else:
-			os.mkfifo(self._path)
-		
-		os.chmod(self._path, 0o0777)
+			st_mode = os.state(self._path).st_mode
+			if not stat.S_ISFIFO(st_mode):
+				os.remove(self._path)
+				os.mkfifo(self._path, mode=self._pipeMode)
+			elif st_mode % 0o10000 != self._pipeMode:
+				os.chmod(self._path, self._pipeMode)
 		
 		def listenForSecret():
 			while 1:
@@ -139,6 +142,8 @@ class PipeListener(ExceptionThread):
 		logger.debug('Started pipe listener at path %s', self._path)
 		
 	def __del__(self):
-		if os.path.exists(self._path):
+		try:
 			os.remove(self._path)
+		except FileNotFoundError:
+			pass
 		logger.debug('Cleaned up pipe listener at path %s', self._path)
