@@ -175,7 +175,7 @@ class StateMachine:
 	
 		self.secretListener = PipeListener(
 			callback = secretCallback,
-			path = '/tmp/secret'
+			path = 'pyledriver/pipes/secret'
 		)
 
 		self.keypadListener = KeypadListener(
