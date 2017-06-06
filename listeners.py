@@ -156,7 +156,7 @@ class PipeListener(ExceptionThread):
 		if not os.path.exists(self._path):
 			os.mkfifo(self._path, mode=pipeMode)
 		else:
-			st_mode = os.state(self._path).st_mode
+			st_mode = os.stat(self._path).st_mode
 			if not stat.S_ISFIFO(st_mode):
 				os.remove(self._path)
 				os.mkfifo(self._path, mode=pipeMode)
