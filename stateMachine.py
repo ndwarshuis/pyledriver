@@ -6,17 +6,15 @@ from collections import namedtuple
 
 from auxilary import CountdownTimer, resetUSBDevice
 from config import stateFile
-from sensors import setupDoorSensor, setupMotionSensor
+from sensors import startDoorSensor, startMotionSensor
 from gmail import intruderAlert
 from listeners import KeypadListener, PipeListener
 from blinkenLights import Blinkenlights
 from soundLib import SoundLib
-from webInterface import initWebInterface
+from webInterface import startWebInterface
 from stream import Camera, FileDump
 
 logger = logging.getLogger(__name__)
-
-resetUSBDevice('1-1')
 
 class SIGNALS:
 	ARM = 1
@@ -69,7 +67,12 @@ class State:
 
 class StateMachine:
 	def __init__(self):
+		self._lock = Lock()
+		
 		self.soundLib = SoundLib()
+		self.LED = Blinkenlights(17)
+		self.camera = Camera()
+		self.fileDump = FileDump()
 		
 		def startTimer(t, sound):
 			self._timer = CountdownTimer(t, partial(self.selectState, SIGNALS.TIMOUT), sound)
@@ -131,35 +134,6 @@ class StateMachine:
 			(self.states.triggered, 		SIGNALS.ARM):			self.states.armed,
 		}
 		
-		self._lock = Lock()
-		
-		self.LED = Blinkenlights(17)
-		
-		self.camera = Camera()
-		
-		def action():
-			if self.currentState == self.states.armed:
-				self.selectState(SIGNALS.TRIGGER)
-
-		self.fileDump = FileDump()
-		sensitiveStates = (self.states.armed, self.states.armedCountdown, self.states.triggered)
-
-		def actionVideo(pin):
-			if self.currentState in sensitiveStates:
-				self.selectState(SIGNALS.TRIGGER)
-				self.fileDump.addInitiator(pin)
-				while GPIO.input(pin) and self.currentState in sensitiveStates:
-					time.sleep(0.1)
-				self.fileDump.removeInitiator(pin)
-
-		setupMotionSensor(5, 'Nate\'s room', action)
-		setupMotionSensor(19, 'front door', action)
-		setupMotionSensor(26, 'Laura\'s room', action)
-		setupMotionSensor(6, 'deck window', partial(actionVideo, 6))
-		setupMotionSensor(13, 'kitchen bar', partial(actionVideo, 13))
-		
-		setupDoorSensor(22, action, self.soundLib.soundEffects['door'])
-		
 		secretTable = {
 			"dynamoHum": 	partial(self.selectState, SIGNALS.DISARM),
 			"zombyWoof": 	partial(self.selectState, SIGNALS.ARM),
@@ -186,10 +160,42 @@ class StateMachine:
 			passwd = '5918462'
 		)
 		
-		initWebInterface(self)
+	def start(self):
+		resetUSBDevice('1-1')
+		
+		self.soundLib.start()
+		self.LED.start()
+		self.keypadListener.start()
+		self.secretListener.start()
+		self.camera.start()
+		self.fileDump.start()
+		
+		def action():
+			if self.currentState == self.states.armed:
+				self.selectState(SIGNALS.TRIGGER)
+		
+		sensitiveStates = (self.states.armed, self.states.armedCountdown, self.states.triggered)
 
+		def actionVideo(pin):
+			if self.currentState in sensitiveStates:
+				self.selectState(SIGNALS.TRIGGER)
+				self.fileDump.addInitiator(pin)
+				while GPIO.input(pin) and self.currentState in sensitiveStates:
+					time.sleep(0.1)
+				self.fileDump.removeInitiator(pin)
+
+		startMotionSensor(5, 'Nate\'s room', action)
+		startMotionSensor(19, 'front door', action)
+		startMotionSensor(26, 'Laura\'s room', action)
+		startMotionSensor(6, 'deck window', partial(actionVideo, 6))
+		startMotionSensor(13, 'kitchen bar', partial(actionVideo, 13))
+		
+		startDoorSensor(22, action, self.soundLib.soundEffects['door'])
+		
+		startWebInterface(self)
+		
 		self.currentState.entry()
-
+		
 	def selectState(self, signal):
 		with self._lock:
 			nextState = self.currentState.next(signal)

@@ -68,7 +68,48 @@ class ThreadedPipeline:
 		self._stopper = Event()
 		
 	def start(self, play=True):
-		self._startPipeline(play)
+		pName = self._pipeline.get_name()
+		stateChange = self._pipeline.set_state(Gst.State.PAUSED)
+		_gstPrintMsg(pName, 'Setting to PAUSED', level=logging.INFO)
+		
+		if stateChange == Gst.StateChangeReturn.FAILURE:
+			_gstPrintMsg(pName, 'Cannot set to PAUSE', level=logging.INFO)
+			self._eventLoop(block=False, doProgress=False, targetState=Gst.State.VOID_PENDING)
+		# we should always end up here because live
+		elif stateChange == Gst.StateChangeReturn.NO_PREROLL:
+			_gstPrintMsg(pName, 'Live and does not need preroll')
+		elif stateChange == Gst.StateChangeReturn.ASYNC:
+			_gstPrintMsg(pName, 'Prerolling')
+			try:
+				_eventLoop(block=True, doProgress=True, targetState=Gst.State.PAUSED)
+			except GstException:
+				_gstPrintMsg(pName, 'Does not want to preroll', level=logging.ERROR)
+				raise SystemExit
+		elif stateChange == Gst.StateChangeReturn.SUCCESS:
+			_gstPrintMsg(pName, 'Is prerolled')
+		
+		# this should always succeed...
+		try:
+			self._eventLoop(block=False, doProgress=True, targetState=Gst.State.PLAYING)
+		except GstException:
+			_gstPrintMsg(pName, 'Does not want to preroll', level=logging.ERROR)
+			raise SystemExit
+		# ...and end up here
+		else:
+			if play:
+				_gstPrintMsg(pName, 'Setting to PLAYING', level=logging.INFO)
+			
+				# ...and since this will ALWAYS be successful...
+				if self._pipeline.set_state(Gst.State.PLAYING) == Gst.StateChangeReturn.FAILURE:
+					_gstPrintMsg(pName, 'Cannot set to PLAYING', level=logging.ERROR)
+					err = self._pipeline.get_bus().pop_filtered(Gst.MessageType.Error)
+					_processErrorMessage(pName, msgSrcName, err)
+			
+			# ...we end up here and loop until Tool releases their next album
+			try:
+				self._mainLoop()
+			except:
+				raise GstException
 	
 	# TODO: this might not all be necessary
 	def stop(self):
@@ -247,50 +288,6 @@ class ThreadedPipeline:
 	@async(daemon=True)
 	def _mainLoop(self):
 		self._eventLoop(block=True, doProgress=False, targetState=Gst.State.PLAYING)
-		
-	def _startPipeline(self, play):
-		pName = self._pipeline.get_name()
-		stateChange = self._pipeline.set_state(Gst.State.PAUSED)
-		_gstPrintMsg(pName, 'Setting to PAUSED', level=logging.INFO)
-		
-		if stateChange == Gst.StateChangeReturn.FAILURE:
-			_gstPrintMsg(pName, 'Cannot set to PAUSE', level=logging.INFO)
-			self._eventLoop(block=False, doProgress=False, targetState=Gst.State.VOID_PENDING)
-		# we should always end up here because live
-		elif stateChange == Gst.StateChangeReturn.NO_PREROLL:
-			_gstPrintMsg(pName, 'Live and does not need preroll')
-		elif stateChange == Gst.StateChangeReturn.ASYNC:
-			_gstPrintMsg(pName, 'Prerolling')
-			try:
-				_eventLoop(block=True, doProgress=True, targetState=Gst.State.PAUSED)
-			except GstException:
-				_gstPrintMsg(pName, 'Does not want to preroll', level=logging.ERROR)
-				raise SystemExit
-		elif stateChange == Gst.StateChangeReturn.SUCCESS:
-			_gstPrintMsg(pName, 'Is prerolled')
-		
-		# this should always succeed...
-		try:
-			self._eventLoop(block=False, doProgress=True, targetState=Gst.State.PLAYING)
-		except GstException:
-			_gstPrintMsg(pName, 'Does not want to preroll', level=logging.ERROR)
-			raise SystemExit
-		# ...and end up here
-		else:
-			if play:
-				_gstPrintMsg(pName, 'Setting to PLAYING', level=logging.INFO)
-			
-				# ...and since this will ALWAYS be successful...
-				if self._pipeline.set_state(Gst.State.PLAYING) == Gst.StateChangeReturn.FAILURE:
-					_gstPrintMsg(pName, 'Cannot set to PLAYING', level=logging.ERROR)
-					err = self._pipeline.get_bus().pop_filtered(Gst.MessageType.Error)
-					_processErrorMessage(pName, msgSrcName, err)
-			
-			# ...we end up here and loop until Tool releases their next album
-			try:
-				self._mainLoop()
-			except:
-				raise GstException
 
 class Camera(ThreadedPipeline):
 	'''
@@ -304,10 +301,11 @@ class Camera(ThreadedPipeline):
 	X = 1 is used by the Janus WebRTC interface and X = 2 is used by the
 	FileDump class below.
 	'''
+	_vPath = '/dev/video0'
+	_aPath = 'hw:1,0'
+	
 	def __init__(self, video=True, audio=True):
 		super().__init__('camera')
-		
-		vPath = '/dev/video0'
 		
 		if video:
 			vSource = Gst.ElementFactory.make("v4l2src", "videoSource")
@@ -318,7 +316,7 @@ class Camera(ThreadedPipeline):
 			vRTPPay = Gst.ElementFactory.make("rtph264pay", "videoRTPPayload")
 			vRTPSink = Gst.ElementFactory.make("multiudpsink", "videoRTPSink")
 		
-			vSource.set_property('device', vPath)
+			vSource.set_property('device', self._vPath)
 			vRTPPay.set_property('config-interval', 1)
 			vRTPPay.set_property('pt', 96)
 			vRTPSink.set_property('clients', '127.0.0.1:9001,127.0.0.1:9002')
@@ -342,7 +340,7 @@ class Camera(ThreadedPipeline):
 			aRTPPay = Gst.ElementFactory.make("rtpopuspay", "audioRTPPayload")
 			aRTPSink = Gst.ElementFactory.make("multiudpsink", "audioRTPSink")
 
-			aSource.set_property('device', 'hw:1,0')
+			aSource.set_property('device', self._aPath)
 			aRTPSink.set_property('clients', '127.0.0.1:8001,127.0.0.1:8002')
 
 			aCaps = Gst.Caps.from_string('audio/x-raw,rate=48000,channels=1')
@@ -355,10 +353,11 @@ class Camera(ThreadedPipeline):
 			_linkElements(aEncode, aRTPPay)
 			_linkElements(aRTPPay, aRTPSink)
 			
-		waitForPath(vPath) # video is on usb, so wait until it comes back after we hard reset the bus
+	def start(self):
+		# video is on usb, so wait until it comes back after we hard reset the bus
+		waitForPath(self._vPath)
+		ThreadedPipeline.start(self, play=False)
 		
-		self.start()
-
 class FileDump(ThreadedPipeline):
 	'''
 	Pipeline that takes audio and input from two udp ports, muxes them, and
@@ -379,7 +378,7 @@ class FileDump(ThreadedPipeline):
 			logger.error('Attempting to init FileDump without gluster mounted. Aborting')
 			raise SystemExit
 			
-		self._savePath = os.path.join(gluster.mountpoint + '/video')
+		self._savePath = os.path.join(gluster.mountpoint, 'video')
 
 		mkdirSafe(self._savePath, logger)
 
@@ -423,11 +422,11 @@ class FileDump(ThreadedPipeline):
 		_linkElements(vQueue, mux)
 		
 		_linkElements(mux, self.sink)
-		
+	
+	def start(self):
 		# TODO: there is probably a better way to init than starting up to PAUSE
 		# and then dropping back down to NULL
-		self.start(play=False)
-		
+		ThreadedPipeline.start(self, play=False)
 		self._pipeline.post_message(Gst.Message.new_request_state(self._pipeline, Gst.State.NULL))
 		
 	def addInitiator(self, identifier):

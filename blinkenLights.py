@@ -31,15 +31,17 @@ class Blinkenlights(ExceptionThread):
 			pwm.stop() # required to avoid core dumps when process terminates
 
 		super().__init__(target=blinkLights, daemon=True)
-		self.start()
+		
+	def start(self):
+		ExceptionThread.start(self)
 		logger.debug('Starting LED on pin %s', self._pin)
 
-	def setCyclePeriod(self, cyclePeriod):
-		self._sleeptime = cyclePeriod/20/2
-		
 	def stop(self):
 		self._stopper.set()
 		logger.debug('Stopping LED on pin %s', self._pin)
+
+	def setCyclePeriod(self, cyclePeriod):
+		self._sleeptime = cyclePeriod/20/2
 		
 	def __del__(self):
 		self.stop()

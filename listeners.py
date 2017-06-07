@@ -11,7 +11,7 @@ import stateMachine
 
 logger = logging.getLogger(__name__)
 
-class KeypadListener():
+class KeypadListener:
 	'''
 	Interface for standard numpad device. Capabilities include:
 	- accepting numeric input
@@ -35,19 +35,10 @@ class KeypadListener():
 			82: '0', 83: '.'
 		}
 		
-		devPath = '/dev/input/by-id/usb-04d9_1203-event-kbd'
-		
-		waitForPath(devPath, logger)
-
-		self._dev = InputDevice(devPath)
-		self._dev.grab()
-		
 		numKeySound = soundLib.soundEffects['numKey']
 		ctrlKeySound = soundLib.soundEffects['ctrlKey']
 		wrongPassSound = soundLib.soundEffects['wrongPass']
 		backspaceSound = soundLib.soundEffects['backspace']
-		
-		self._clearBuffer()
 		
 		def getInput():
 			while 1:
@@ -111,12 +102,25 @@ class KeypadListener():
 
 							ctrlKeySound.play()
 							self._dev.set_led(ecodes.LED_NUML, 0 if soundLib.volume > 0 else 1)
-
-		self._resetCountdown = None
 		
 		self._listener = ExceptionThread(target=getInput, daemon=True)
+		self._resetCountdown = None
+		self._clearBuffer()
+		
+	def start(self):
+		devPath = '/dev/input/by-id/usb-04d9_1203-event-kbd'
+		
+		waitForPath(devPath, logger)
+
+		self._dev = InputDevice(devPath)
+		self._dev.grab()
+		
 		self._listener.start()
-		logger.debug('Started keypad device')
+		logger.debug('Started keypad listener')
+		
+	def resetBuffer(self):
+		self._stopResetCountdown
+		self._clearBuffer()
 
 	def _startResetCountdown(self):
 		self._resetCountdown = CountdownTimer(30, self._clearBuffer)
@@ -125,10 +129,6 @@ class KeypadListener():
 		if self._resetCountdown is not None and self._resetCountdown.is_alive():
 			self._resetCountdown.stop()
 		self._resetCountdown = None
-
-	def resetBuffer(self):
-		self._stopResetCountdown
-		self._clearBuffer()
 		
 	def _clearBuffer(self):
 		self._buf = ''
@@ -170,7 +170,9 @@ class PipeListener(ExceptionThread):
 					callback(msg, logger)
 		
 		super().__init__(target=listen, daemon=True)
-		self.start()
+		
+	def start(self):
+		ExceptionThread.start(self)
 		logger.debug('Started pipe listener at path %s', self._path)
 		
 	def __del__(self):

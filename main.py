@@ -36,6 +36,7 @@ if __name__ == '__main__':
 		GPIO.setmode(GPIO.BCM)
 		
 		stateMachine = StateMachine()
+		stateMachine.start()
 
 		signal.signal(signal.SIGTERM, sigtermHandler)
 

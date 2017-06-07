@@ -20,7 +20,7 @@ class TTSForm(FlaskForm):
 # TODO: fix random connection fails (might be an nginx thing)
 
 @async(daemon=True)
-def initWebInterface(stateMachine):
+def startWebInterface(stateMachine):
 	siteRoot = Blueprint('siteRoot', __name__, static_folder='static', static_url_path='')
 
 	@siteRoot.route('/', methods=['GET', 'POST'])

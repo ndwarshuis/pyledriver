@@ -88,6 +88,8 @@ class SoundLib:
 		
 		self._ttsQueue = queue.Queue()
 		self._stopper = Event()
+
+	def start(self):
 		self._startMonitor()
 
 	def changeVolume(self, volumeDelta):
@@ -100,7 +102,7 @@ class SoundLib:
 	
 	def speak(self, text):
 		self._ttsQueue.put_nowait(text)
-
+		
 	@async(daemon=False)
 	def _fader(self, lowerVolume, totalDuration, fadeDuration=0.2, stepSize=5):
 		alarm = self.soundEffects['triggered']
