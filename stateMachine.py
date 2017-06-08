@@ -75,10 +75,14 @@ class StateMachine:
 		self.camera = Camera()
 		self.fileDump = FileDump()
 		
+		# add signals to self to avoid calling partial every time
+		for s in SIGNALS:
+			setattr(self, s.name, partial(self.selectState, s))
+		
 		secretTable = {
-			"dynamoHum": 	partial(self.selectState, SIGNALS.DISARM),
-			"zombyWoof": 	partial(self.selectState, SIGNALS.ARM),
-			"imTheSlime": 	partial(self.selectState, SIGNALS.INSTANT_ARM)
+			'dynamoHum': self.DISARM,
+			'zombyWoof': self.ARM,
+			'imTheSlime': self.INSTANT_ARM
 		}
 		
 		def secretCallback(secret, logger):
@@ -88,21 +92,18 @@ class StateMachine:
 			elif logger:
 				logger.debug('Secret pipe listener received invalid secret')
 	
-		self.secretListener = PipeListener(
-			callback = secretCallback,
-			name = 'secret'
-		)
+		self.secretListener = PipeListener(callback=secretCallback, name= 'secret')
 
 		self.keypadListener = KeypadListener(
 			stateMachine = self,
-			callbackDisarm = partial(self.selectState, SIGNALS.DISARM),
-			callbackArm = partial(self.selectState, SIGNALS.ARM),
+			callbackDisarm = self.DISARM,
+			callbackArm = self.ARM,
 			soundLib = self.soundLib,
 			passwd = '5918462'
 		)
 		
 		def startTimer(t, sound):
-			self._timer = CountdownTimer(t, partial(self.selectState, SIGNALS.TIMOUT), sound)
+			self._timer = CountdownTimer(t, self.TIMOUT, sound)
 			
 		def stopTimer():
 			if self._timer.is_alive():
