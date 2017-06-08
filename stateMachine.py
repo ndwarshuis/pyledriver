@@ -54,7 +54,7 @@ class State:
 
 	def next(self, signal):
 		t = (self, signal)
-		return self if t not in self.stateMachine.transitionTable else self.stateMachine.transitionTable[t]
+		return self.stateMachine.transitionTable[t]
 	
 	def __str__(self):
 		return self.name
