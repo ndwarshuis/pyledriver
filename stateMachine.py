@@ -74,6 +74,32 @@ class StateMachine:
 		self.camera = Camera()
 		self.fileDump = FileDump()
 		
+		secretTable = {
+			"dynamoHum": 	partial(self.selectState, SIGNALS.DISARM),
+			"zombyWoof": 	partial(self.selectState, SIGNALS.ARM),
+			"imTheSlime": 	partial(self.selectState, SIGNALS.INSTANT_ARM)
+		}
+		
+		def secretCallback(secret, logger):
+			if secret in secretTable:
+				secretTable[secret]()
+				logger.debug('Secret pipe listener received: \"%s\"', secret)
+			elif logger:
+				logger.debug('Secret pipe listener received invalid secret')
+	
+		self.secretListener = PipeListener(
+			callback = secretCallback,
+			name = 'secret'
+		)
+
+		self.keypadListener = KeypadListener(
+			stateMachine = self,
+			callbackDisarm = partial(self.selectState, 'disarm'),
+			callbackArm = partial(self.selectState, 'arm'),
+			soundLib = self.soundLib,
+			passwd = '5918462'
+		)
+		
 		def startTimer(t, sound):
 			self._timer = CountdownTimer(t, partial(self.selectState, SIGNALS.TIMOUT), sound)
 			
@@ -134,34 +160,8 @@ class StateMachine:
 			(self.states.triggered, 		SIGNALS.ARM):			self.states.armed,
 		}
 		
-		secretTable = {
-			"dynamoHum": 	partial(self.selectState, SIGNALS.DISARM),
-			"zombyWoof": 	partial(self.selectState, SIGNALS.ARM),
-			"imTheSlime": 	partial(self.selectState, SIGNALS.INSTANT_ARM)
-		}
-		
-		def secretCallback(secret, logger):
-			if secret in secretTable:
-				secretTable[secret]()
-				logger.debug('Secret pipe listener received: \"%s\"', secret)
-			elif logger:
-				logger.debug('Secret pipe listener received invalid secret')
-	
-		self.secretListener = PipeListener(
-			callback = secretCallback,
-			name = 'secret'
-		)
-
-		self.keypadListener = KeypadListener(
-			stateMachine = self,
-			callbackDisarm = partial(self.selectState, 'disarm'),
-			callbackArm = partial(self.selectState, 'arm'),
-			soundLib = self.soundLib,
-			passwd = '5918462'
-		)
-		
 	def start(self):
-		resetUSBDevice('1-1')
+		resetUSBDevice('1-1', logger)
 		
 		self.soundLib.start()
 		self.LED.start()

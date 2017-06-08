@@ -355,7 +355,7 @@ class Camera(ThreadedPipeline):
 			
 	def start(self):
 		# video is on usb, so wait until it comes back after we hard reset the bus
-		waitForPath(self._vPath)
+		waitForPath(self._vPath, logger)
 		ThreadedPipeline.start(self, play=False)
 		
 class FileDump(ThreadedPipeline):
