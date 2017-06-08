@@ -46,7 +46,7 @@ def mkdirSafe(path, logger):
 			'Please (re)move this file to prevent data loss', path)
 		raise SystemExit
 
-def waitForPath(path, logger=None, timeout=30):
+def waitForPath(path, logger, timeout=30):
 	'''
 	Waits for a path to appear. Useful for procfs and sysfs where devices
 	regularly (dis)appear. Timeout given in seconds
@@ -55,11 +55,10 @@ def waitForPath(path, logger=None, timeout=30):
 		if os.path.exists(path):
 			return
 		time.sleep(1)
-	if logger:
-		logger.error('Could not find %s after %s seconds', path, timeout)
+	logger.error('Could not find %s after %s seconds', path, timeout)
 	raise SystemExit
 
-def resetUSBDevice(device):
+def resetUSBDevice(device, logger):
 	'''
 	Resets a USB device using the de/reauthorization method. This is really
 	crude but works beautifully
@@ -69,3 +68,4 @@ def resetUSBDevice(device):
 		f.write('0')
 	with open(devpath, 'w') as f:
 		f.write('1')
+	logger.debug('Reset USB device: %s', devpath)
