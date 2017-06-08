@@ -94,8 +94,8 @@ class StateMachine:
 
 		self.keypadListener = KeypadListener(
 			stateMachine = self,
-			callbackDisarm = partial(self.selectState, 'disarm'),
-			callbackArm = partial(self.selectState, 'arm'),
+			callbackDisarm = partial(self.selectState, SIGNALS.DISARM),
+			callbackArm = partial(self.selectState, SIGNALS.ARM),
 			soundLib = self.soundLib,
 			passwd = '5918462'
 		)
