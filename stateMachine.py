@@ -1,8 +1,9 @@
 import RPi.GPIO as GPIO
-import time, logging
+import time, logging, enum
 from threading import Lock
 from functools import partial
 from collections import namedtuple
+from enum import Enum, auto
 
 from auxilary import CountdownTimer, resetUSBDevice
 from config import stateFile
@@ -16,12 +17,12 @@ from stream import Camera, FileDump
 
 logger = logging.getLogger(__name__)
 
-class SIGNALS:
-	ARM = 1
-	INSTANT_ARM = 2
-	DISARM = 3
-	TIMOUT = 4
-	TRIGGER = 5	
+class SIGNALS(enum.Enum):
+	ARM = enum.auto()
+	INSTANT_ARM = enum.auto()
+	DISARM = enum.auto()
+	TIMOUT = enum.auto()
+	TRIGGER = enum.auto()
 
 class State:
 	def __init__(self, stateMachine, name, entryCallbacks=[], exitCallbacks=[], blinkLED=True, sound=None):
@@ -53,8 +54,11 @@ class State:
 			c()
 
 	def next(self, signal):
-		t = (self, signal)
-		return self if t not in self.stateMachine.transitionTable else self.stateMachine.transitionTable[t]
+		if signal in SIGNALS:
+			t = (self, signal)
+			return self if t not in self.stateMachine.transitionTable else self.stateMachine.transitionTable[t]
+		else:
+			raise Exception('Illegal signal')
 	
 	def __str__(self):
 		return self.name
