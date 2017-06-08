@@ -25,38 +25,35 @@ class SIGNALS(enum.Enum):
 	TRIGGER = enum.auto()
 
 class State:
-	def __init__(self, stateMachine, name, entryCallbacks=[], exitCallbacks=[], blinkLED=True, sound=None):
+	def __init__(self, stateMachine, name, entryCallbacks=[], exitCallbacks=[], sound=None):
 		self.stateMachine = stateMachine
 		self.name = name
 		self.entryCallbacks = entryCallbacks
 		self.exitCallbacks = exitCallbacks
-		self.blinkLED = blinkLED
 		
-		if not sound and name in stateMachine.soundLib.soundEffects:
-			self.sound = stateMachine.soundLib.soundEffects[name]
-		else:
-			self.sound = sound
+		sfx = stateMachine.soundLib.soundEffects
+		
+		self._sound = sfx[name] if not sound and name in sfx else sound
 		
 	def entry(self):
 		logger.info('entering ' + self.name)
-		if self.sound:
-			self.sound.play()
-		self.stateMachine.LED.blink = self.blinkLED
-		self.stateMachine.keypadListener.resetBuffer()
+		if self._sound:
+			self._sound.play()
 		for c in self.entryCallbacks:
 			c()
 		
 	def exit(self):
 		logger.info('exiting ' + self.name)
-		if self.sound:
-			self.sound.stop()
+		if self._sound:
+			self._sound.stop()
 		for c in self.exitCallbacks:
 			c()
 
 	def next(self, signal):
 		if signal in SIGNALS:
-			t = (self, signal)
-			return self if t not in self.stateMachine.transitionTable else self.stateMachine.transitionTable[t]
+			s = (self, signal)
+			t = self.stateMachine.transitionTable
+			return self if s not in t else t[s]
 		else:
 			raise Exception('Illegal signal')
 	
@@ -112,34 +109,41 @@ class StateMachine:
 				self._timer.stop()
 				self._timer = None
 
+		blinkingLED = partial(self.LED.setBlink, True)
+		sfx = self.soundLib.soundEffects
+
 		stateObjs = [
 			State(
 				self,
 				name = 'disarmed',
-				blinkLED = False
+				entryCallbacks = [partial(self.LED.setBlink, False)]
 			),
 			State(
 				self,
-				name='disarmedCountdown',
-				entryCallbacks = [partial(startTimer, 30, self.soundLib.soundEffects['disarmedCountdown'])],
+				name = 'disarmedCountdown',
+				entryCallbacks = [blinkingLED, partial(startTimer, 30, sfx['disarmedCountdown'])],
 				exitCallbacks = [stopTimer]
 			),
 			State(
 				self,
-				name = 'armed'
+				name = 'armed',
+				entryCallbacks = [blinkingLED]
 			),
 			State(
 				self,
 				name = 'armedCountdown',
-				entryCallbacks = [partial(startTimer, 30, self.soundLib.soundEffects['armedCountdown'])],
+				entryCallbacks = [blinkingLED, partial(startTimer, 30, sfx['armedCountdown'])],
 				exitCallbacks = [stopTimer]
 			),
 			State(
 				self,
 				name = 'triggered',
-				entryCallbacks = [intruderAlert]
+				entryCallbacks = [blinkingLED, intruderAlert]
 			)
 		]
+		
+		for s in stateObjs:
+			s.entryCallbacks.append(self.keypadListener.resetBuffer)
 		
 		self.states = namedtuple('States', [s.name for s in stateObjs])(*stateObjs)
 

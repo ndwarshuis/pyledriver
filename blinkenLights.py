@@ -11,7 +11,7 @@ class Blinkenlights(ExceptionThread):
 		self._stopper = Event()
 		self._pin = pin
 		
-		self.blink = False
+		self._blink = False
 		self.setCyclePeriod(cyclePeriod) #cyclePeriod is length of one blink cycle in seconds
 		
 		GPIO.setup(pin, GPIO.OUT)
@@ -21,7 +21,7 @@ class Blinkenlights(ExceptionThread):
 			pwm.start(0)
 			while not self._stopper.isSet():
 				t = self._sleeptime
-				if self.blink:
+				if self._blink:
 					for dc in chain(range(100, -1, -5), range(0, 101, 5)):
 						pwm.ChangeDutyCycle(dc)
 						time.sleep(t)
@@ -42,6 +42,9 @@ class Blinkenlights(ExceptionThread):
 
 	def setCyclePeriod(self, cyclePeriod):
 		self._sleeptime = cyclePeriod/20/2
+		
+	def setBlink(self, toggle):
+		self._blink = toggle
 		
 	def __del__(self):
 		self.stop()
