@@ -154,12 +154,14 @@ class PipeListener(ExceptionThread):
 		pipeMode = 0o0777
 		
 		if not os.path.exists(self._path):
-			os.mkfifo(self._path, mode=pipeMode)
+			os.mkfifo(self._path)
+			os.chmod(self._path, pipeMode)
 		else:
 			st_mode = os.stat(self._path).st_mode
 			if not stat.S_ISFIFO(st_mode):
 				os.remove(self._path)
-				os.mkfifo(self._path, mode=pipeMode)
+				os.mkfifo(self._path)
+				os.chmod(self._path, pipeMode)
 			elif st_mode % 0o10000 != pipeMode:
 				os.chmod(self._path, pipeMode)
 		
