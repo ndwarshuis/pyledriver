@@ -214,8 +214,6 @@ class StateMachine:
 				self.currentState.entry()
 			
 			stateFile['state'] = self.currentState.name
-			
-			logger.info('state changed to %s', self.currentState)
 		
 	def __del__(self):
 		for i in ['LED', 'camera', 'fileDump', 'soundLib', 'secretListener', 'keypadListener']:
