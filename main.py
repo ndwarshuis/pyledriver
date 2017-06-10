@@ -13,11 +13,6 @@ def clean():
 	GPIO.cleanup()
 
 	try:
-		stateMachine.__del__()
-	except NameError:
-		pass
-
-	try:
 		logger.info('Terminated root process - PID: %s', os.getpid())
 		unmountGluster()
 	except Exception:
@@ -35,12 +30,9 @@ if __name__ == '__main__':
 		GPIO.setwarnings(False)
 		GPIO.setmode(GPIO.BCM)
 		
-		stateMachine = StateMachine()
-		stateMachine.start()
-
-		signal.signal(signal.SIGTERM, sigtermHandler)
-
-		excChildListener()
+		with StateMachine() as stateMachine:
+			signal.signal(signal.SIGTERM, sigtermHandler)
+			excChildListener()
 
 	except Exception:
 		logger.critical(traceback.format_exc())

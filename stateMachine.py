@@ -167,7 +167,7 @@ class StateMachine:
 		
 		self.currentState = getattr(self.states, stateFile['state'])
 		
-	def start(self):
+	def __enter__(self):
 		resetUSBDevice('1-1', logger)
 		
 		self.soundLib.start()
@@ -203,6 +203,13 @@ class StateMachine:
 		
 		self.currentState.entry()
 
+	def __exit__(self, exception_type, exception_value, traceback):
+		for i in ['LED', 'camera', 'fileDump', 'soundLib', 'secretListener', 'keypadListener']:
+			try:
+				getattr(self, i).__del__()
+			except AttributeError:
+				pass
+
 	def selectState(self, signal):
 		with self._lock:
 			nextState = self.currentState.next(signal)
@@ -212,10 +219,3 @@ class StateMachine:
 				self.currentState.entry()
 			
 			stateFile['state'] = self.currentState.name
-
-	def __del__(self):
-		for i in ['LED', 'camera', 'fileDump', 'soundLib', 'secretListener', 'keypadListener']:
-			try:
-				getattr(self, i).__del__()
-			except AttributeError:
-				pass
