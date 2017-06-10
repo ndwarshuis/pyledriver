@@ -209,11 +209,6 @@ class StateMachine:
 				getattr(self, i).stop()
 			except AttributeError:
 				pass
-		for i in ['LED', 'camera', 'fileDump', 'soundLib', 'secretListener', 'keypadListener']:
-			try:
-				getattr(self, i).__del__()
-			except AttributeError:
-				pass
 
 	def selectState(self, signal):
 		with self._lock:
