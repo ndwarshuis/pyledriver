@@ -113,9 +113,10 @@ class ThreadedPipeline:
 	
 	# TODO: this might not all be necessary
 	def stop(self):
-		self._stopper.set()
-		self._pipeline.set_state(Gst.State.NULL)
-		logger.debug('Shut down gstreamer pipeline: %s', self._pipeline.get_name())
+		if self._stopper.is_set():
+			self._stopper.set()
+			self._pipeline.set_state(Gst.State.NULL)
+			logger.debug('Shut down gstreamer pipeline: %s', self._pipeline.get_name())
 		
 	def __del__(self):
 		self.stop()
