@@ -3,10 +3,11 @@ Classes that listen for user input
 '''
 
 import logging, os, sys, stat
+from threading import Timer
 from exceptionThreading import ExceptionThread
 from evdev import InputDevice, ecodes
 from select import select
-from auxilary import CountdownTimer, waitForPath
+from auxilary import waitForPath
 import stateMachine
 
 logger = logging.getLogger(__name__)
@@ -104,7 +105,6 @@ class KeypadListener:
 							self._dev.set_led(ecodes.LED_NUML, 0 if soundLib.volume > 0 else 1)
 		
 		self._listener = ExceptionThread(target=getInput, daemon=True)
-		self._resetCountdown = None
 		self._clearBuffer()
 		
 	def start(self):
@@ -129,16 +129,17 @@ class KeypadListener:
 			pass
 		
 	def resetBuffer(self):
-		self._stopResetCountdown
+		self._stopResetCountdown()
 		self._clearBuffer()
 
 	def _startResetCountdown(self):
-		self._resetCountdown = CountdownTimer(30, self._clearBuffer)
+		self._resetTimer = Timer(30, self._clearBuffer)
 		
 	def _stopResetCountdown(self):
-		if self._resetCountdown is not None and self._resetCountdown.is_alive():
-			self._resetCountdown.stop()
-		self._resetCountdown = None
+		try:
+			self._resetTimer.cancel()
+		except AttributeError:
+			pass
 		
 	def _clearBuffer(self):
 		self._buf = ''
