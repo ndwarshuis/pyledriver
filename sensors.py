@@ -1,7 +1,7 @@
 import RPi.GPIO as GPIO
 import logging, time
 from functools import partial
-from auxilary import CountdownTimer
+from threading import Timer
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +36,9 @@ def startMotionSensor(pin, location, action):
 			action()
 	
 	logger.debug('waiting %s for %s to power on', INIT_DELAY, name)
-	CountdownTimer(INIT_DELAY, partial(_initGPIO, name, pin, GPIO.RISING, trip))
+	t = Timer(INIT_DELAY, partial(_initGPIO, name, pin, GPIO.RISING, trip))
+	t.daemon = True
+	t.start()
 
 def startDoorSensor(pin, action, sound=None):
 	def trip(channel):
