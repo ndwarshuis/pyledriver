@@ -74,8 +74,8 @@ class StateMachine:
 		self.fileDump = FileDump()
 		
 		# add signals to self to avoid calling partial every time
-		for s in SIGNALS:
-			setattr(self, s.name, partial(self.selectState, s))
+		for sig in SIGNALS:
+			setattr(self, sig.name, partial(self.selectState, sig))
 		
 		secretTable = {
 			'dynamoHum': self.DISARM,
@@ -141,29 +141,29 @@ class StateMachine:
 			)
 		]
 		
-		for s in stateObjs:
-			s.entryCallbacks.append(self.keypadListener.resetBuffer)
+		for obj in stateObjs:
+			obj.entryCallbacks.append(self.keypadListener.resetBuffer)
 		
-		self.states = s = namedtuple('States', [s.name for s in stateObjs])(*stateObjs)
+		self.states = st = namedtuple('States', [obj.name for obj in stateObjs])(*stateObjs)
 
-		s.disarmed.addTransition(			SIGNALS.ARM, 			s.disarmedCountdown)
-		s.disarmed.addTransition(			SIGNALS.INSTANT_ARM, 	s.armed)
+		st.disarmed.addTransition(			SIGNALS.ARM, 			st.disarmedCountdown)
+		st.disarmed.addTransition(			SIGNALS.INSTANT_ARM, 	st.armed)
 		
-		s.disarmedCountdown.addTransition(	SIGNALS.DISARM, 		s.disarmed)
-		s.disarmedCountdown.addTransition(	SIGNALS.TIMOUT, 		s.armed)
-		s.disarmedCountdown.addTransition(	SIGNALS.INSTANT_ARM, 	s.armed)
+		st.disarmedCountdown.addTransition(	SIGNALS.DISARM, 		st.disarmed)
+		st.disarmedCountdown.addTransition(	SIGNALS.TIMOUT, 		st.armed)
+		st.disarmedCountdown.addTransition(	SIGNALS.INSTANT_ARM, 	st.armed)
 		
-		s.armed.addTransition(				SIGNALS.DISARM, 		s.disarmed)
-		s.armed.addTransition(				SIGNALS.TRIGGER, 		s.armedCountdown)
+		st.armed.addTransition(				SIGNALS.DISARM, 		st.disarmed)
+		st.armed.addTransition(				SIGNALS.TRIGGER, 		st.armedCountdown)
 		
-		s.armedCountdown.addTransition(		SIGNALS.DISARM, 		s.disarmed)
-		s.armedCountdown.addTransition(		SIGNALS.TIMOUT, 		s.triggered)
-		s.armedCountdown.addTransition(		SIGNALS.ARM, 			s.armed)
-		s.armedCountdown.addTransition(		SIGNALS.INSTANT_ARM, 	s.armed)
+		st.armedCountdown.addTransition(	SIGNALS.DISARM, 		st.disarmed)
+		st.armedCountdown.addTransition(	SIGNALS.TIMOUT, 		st.triggered)
+		st.armedCountdown.addTransition(	SIGNALS.ARM, 			st.armed)
+		st.armedCountdown.addTransition(	SIGNALS.INSTANT_ARM, 	st.armed)
 		
-		s.triggered.addTransition(			SIGNALS.DISARM, 		s.disarmed)
-		s.triggered.addTransition(			SIGNALS.ARM, 			s.armed)
-		s.triggered.addTransition(			SIGNALS.INSTANT_ARM, 	s.armed)
+		st.triggered.addTransition(			SIGNALS.DISARM, 		st.disarmed)
+		st.triggered.addTransition(			SIGNALS.ARM, 			st.armed)
+		st.triggered.addTransition(			SIGNALS.INSTANT_ARM, 	st.armed)
 		
 		self.currentState = getattr(self.states, stateFile['state'])
 		
