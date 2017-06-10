@@ -24,25 +24,25 @@ class SIGNALS(enum.Enum):
 	TRIGGER = enum.auto()
 
 class State:
-	def __init__(self, sfx, name, entryCallbacks=[], exitCallbacks=[], sound=None):
+	def __init__(self, name, entryCallbacks=[], exitCallbacks=[], sound=None):
 		self.name = name
 		self.entryCallbacks = entryCallbacks
 		self.exitCallbacks = exitCallbacks
 		self._transTbl = {}
 		
-		#~ self._sound = sfx[name] if not sound and name in sfx else sound
+		self._sound = sound
 		
 	def entry(self):
 		logger.info('entering ' + self.name)
-		#~ if self._sound:
-			#~ self._sound.play()
+		if self._sound:
+			self._sound.play()
 		for c in self.entryCallbacks:
 			c()
 		
 	def exit(self):
 		logger.info('exiting ' + self.name)
-		#~ if self._sound:
-			#~ self._sound.stop()
+		if self._sound:
+			self._sound.stop()
 		for c in self.exitCallbacks:
 			c()
 
@@ -113,33 +113,31 @@ class StateMachine:
 
 		stateObjs = [
 			State(
-				sfx,
 				name = 'disarmed',
-				entryCallbacks = [partial(self.LED.setBlink, False)]
+				entryCallbacks = [partial(self.LED.setBlink, False)],
+				sound = sfx['disarmed']
 			),
 			State(
-				sfx,
 				name = 'disarmedCountdown',
-				#~ entryCallbacks = [blinkingLED, partial(startTimer, 30, sfx['disarmedCountdown'])],
-				entryCallbacks = [blinkingLED, partial(startTimer, 30)],
-				exitCallbacks = [stopTimer]
+				entryCallbacks = [blinkingLED, partial(startTimer, 30, sfx['disarmedCountdown'])],
+				exitCallbacks = [stopTimer],
+				sound = sfx['disarmedCountdown']
 			),
 			State(
-				sfx,
 				name = 'armed',
-				entryCallbacks = [blinkingLED]
+				entryCallbacks = [blinkingLED],
+				sound = sfx['armed']
 			),
 			State(
-				sfx,
 				name = 'armedCountdown',
-				#~ entryCallbacks = [blinkingLED, partial(startTimer, 30, sfx['armedCountdown'])],
-				entryCallbacks = [blinkingLED, partial(startTimer, 30)],
-				exitCallbacks = [stopTimer]
+				entryCallbacks = [blinkingLED, partial(startTimer, 30, sfx['armedCountdown'])],
+				exitCallbacks = [stopTimer],
+				sound = sfx['armedCountdown']
 			),
 			State(
-				sfx,
 				name = 'triggered',
-				entryCallbacks = [blinkingLED, intruderAlert]
+				entryCallbacks = [blinkingLED, intruderAlert],
+				sound = sfx['triggered']
 			)
 		]
 		
