@@ -51,7 +51,7 @@ class KeypadListener:
 						if event.code in numKeys:
 							if stateMachine.currentState != stateMachine.states.disarmed:
 								self._buf = self._buf + numKeys[event.code]
-								self._startResetCountdown()
+								self._startResetTimer()
 							numKeySound.play()
 
 						# ctrl input
@@ -80,7 +80,7 @@ class KeypadListener:
 							elif val == 'BS':
 								self._buf = self._buf[:-1]
 								if self._buf == '':
-									self._stopResetCountdown()
+									self._stopResetTimer()
 								backspaceSound.play()
 							
 							# reset buffer
@@ -129,13 +129,13 @@ class KeypadListener:
 			pass
 		
 	def resetBuffer(self):
-		self._stopResetCountdown()
+		self._stopResetTimer()
 		self._clearBuffer()
 
-	def _startResetCountdown(self):
+	def _startResetTimer(self):
 		self._resetTimer = Timer(30, self._clearBuffer)
 		
-	def _stopResetCountdown(self):
+	def _stopResetTimer(self):
 		try:
 			self._resetTimer.cancel()
 		except AttributeError:
