@@ -1,5 +1,5 @@
 import RPi.GPIO as GPIO
-import time, logging, enum, weakref
+import time, logging, enum
 from threading import Lock
 from functools import partial
 from collections import namedtuple
