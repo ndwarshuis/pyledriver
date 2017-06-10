@@ -53,7 +53,7 @@ class State:
 			raise Exception('Illegal signal')
 			
 	def addTransition(self, signal, state):
-		self._transTbl[signal] = weakref.ref(state)
+		self._transTbl[signal] = state
 	
 	def __str__(self):
 		return self.name
