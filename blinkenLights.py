@@ -37,8 +37,9 @@ class Blinkenlights(ExceptionThread):
 		logger.debug('Starting LED on pin %s', self._pin)
 
 	def stop(self):
-		self._stopper.set()
-		logger.debug('Stopping LED on pin %s', self._pin)
+		if self.is_alive():
+			self._stopper.set()
+			logger.debug('Stopping LED on pin %s', self._pin)
 
 	def setCyclePeriod(self, cyclePeriod):
 		self._sleeptime = cyclePeriod/20/2

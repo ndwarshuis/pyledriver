@@ -118,6 +118,16 @@ class KeypadListener:
 		self._listener.start()
 		logger.debug('Started keypad listener')
 		
+	def stop(self):
+		try:
+			self._dev.ungrab()
+			self._dev = None
+			logger.debug('Released keypad device')
+		except IOError:
+			logger.error('Failed to release keypad device')
+		except AttributeError:
+			pass
+		
 	def resetBuffer(self):
 		self._stopResetCountdown
 		self._clearBuffer()
@@ -134,13 +144,7 @@ class KeypadListener:
 		self._buf = ''
 		
 	def __del__(self):
-		try:
-			self._dev.ungrab()
-			logger.debug('Released keypad device')
-		except IOError:
-			logger.error('Failed to release keypad device')
-		except AttributeError:
-			pass
+		self.stop()
 			
 class PipeListener(ExceptionThread):
 	'''
@@ -177,9 +181,13 @@ class PipeListener(ExceptionThread):
 		ExceptionThread.start(self)
 		logger.debug('Started pipe listener at path %s', self._path)
 		
-	def __del__(self):
+	def stop(self):
 		try:
 			os.remove(self._path)
+			logger.debug('Cleaned up pipe listener at path %s', self._path)
 		except FileNotFoundError:
 			pass
-		logger.debug('Cleaned up pipe listener at path %s', self._path)
+
+	def __del__(self):
+		self.stop()
+

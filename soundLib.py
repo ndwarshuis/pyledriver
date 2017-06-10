@@ -91,6 +91,12 @@ class SoundLib:
 
 	def start(self):
 		self._startMonitor()
+		
+	def stop(self):
+		self._stopMonitor()
+		self._ttsSounds.clear()
+		# this sometimes casues "Fatal Python error: (pygame parachute) Segmentation Fault"
+		mixer.quit()
 
 	def changeVolume(self, volumeDelta):
 		newVolume = self.volume + volumeDelta
@@ -194,7 +200,4 @@ class SoundLib:
 		logger.debug('Stopping TTS Queue Monitor')
 
 	def __del__(self):
-		self._stopMonitor()
-		self._ttsSounds.clear()
-		# this sometimes casues "Fatal Python error: (pygame parachute) Segmentation Fault"
-		mixer.quit()
+		self.stop()

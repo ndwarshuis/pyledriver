@@ -206,6 +206,11 @@ class StateMachine:
 	def __exit__(self, exception_type, exception_value, traceback):
 		for i in ['LED', 'camera', 'fileDump', 'soundLib', 'secretListener', 'keypadListener']:
 			try:
+				getattr(self, i).stop()
+			except AttributeError:
+				pass
+		for i in ['LED', 'camera', 'fileDump', 'soundLib', 'secretListener', 'keypadListener']:
+			try:
 				getattr(self, i).__del__()
 			except AttributeError:
 				pass
