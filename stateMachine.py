@@ -1,10 +1,10 @@
 import RPi.GPIO as GPIO
-import time, logging, enum
+import time, logging, enum, os
 from threading import Lock
 from functools import partial
 from collections import namedtuple
 
-from auxilary import CountdownTimer, resetUSBDevice
+from exceptionThreading import ExceptionThread
 from config import stateFile
 from sensors import startDoorSensor, startMotionSensor
 from gmail import intruderAlert
@@ -16,14 +16,53 @@ from stream import Camera, FileDump
 
 logger = logging.getLogger(__name__)
 
-class SIGNALS(enum.Enum):
+class _SIGNALS(enum.Enum):
 	ARM = enum.auto()
 	INSTANT_ARM = enum.auto()
 	DISARM = enum.auto()
 	TIMOUT = enum.auto()
 	TRIGGER = enum.auto()
+	
+class _CountdownTimer(ExceptionThread):
+	'''
+	Launches thread which self terminates after some time (given in seconds).
+	Termination triggers some action (a function). Optionally, a sound can be
+	assigned to each 'tick'
+	'''
+	def __init__(self, countdownSeconds, action, sound=None):
+		self._stopper = Event()
 
-class State:
+		def countdown():
+			for i in range(countdownSeconds, 0, -1):
+				if self._stopper.isSet():
+					return None
+				if sound and i < countdownSeconds:
+					sound.play()
+				time.sleep(1)
+			action()
+
+		super().__init__(target=countdown, daemon=True)
+		self.start()
+
+	def stop(self):
+		self._stopper.set()
+
+	def __del__(self):
+		self.stop()
+		
+def _resetUSBDevice(device):
+	'''
+	Resets a USB device using the de/reauthorization method. This is really
+	crude but works beautifully
+	'''
+	devpath = os.path.join('/sys/bus/usb/devices/' + device + '/authorized')
+	with open(devpath, 'w') as f:
+		f.write('0')
+	with open(devpath, 'w') as f:
+		f.write('1')
+	logger.debug('Reset USB device: %s', devpath)
+
+class _State:
 	def __init__(self, name, entryCallbacks=[], exitCallbacks=[], sound=None):
 		self.name = name
 		self.entryCallbacks = entryCallbacks
@@ -47,7 +86,7 @@ class State:
 			c()
 
 	def next(self, signal):
-		if signal in SIGNALS:
+		if signal in _SIGNALS:
 			return self if signal not in self._transTbl else self._transTbl[signal]
 		else:
 			raise Exception('Illegal signal')
@@ -74,7 +113,7 @@ class StateMachine:
 		self.fileDump = FileDump()
 		
 		# add signals to self to avoid calling partial every time
-		for sig in SIGNALS:
+		for sig in _SIGNALS:
 			setattr(self, sig.name, partial(self.selectState, sig))
 		
 		secretTable = {
@@ -101,7 +140,7 @@ class StateMachine:
 		)
 		
 		def startTimer(t, sound):
-			self._timer = CountdownTimer(t, self.TIMOUT, sound)
+			self._timer = _CountdownTimer(t, self.TIMOUT, sound)
 			
 		def stopTimer():
 			if self._timer.is_alive():
@@ -112,29 +151,29 @@ class StateMachine:
 		sfx = self.soundLib.soundEffects
 
 		stateObjs = [
-			State(
+			_State(
 				name = 'disarmed',
 				entryCallbacks = [partial(self.LED.setBlink, False)],
 				sound = sfx['disarmed']
 			),
-			State(
+			_State(
 				name = 'disarmedCountdown',
 				entryCallbacks = [blinkingLED, partial(startTimer, 30, sfx['disarmedCountdown'])],
 				exitCallbacks = [stopTimer],
 				sound = sfx['disarmedCountdown']
 			),
-			State(
+			_State(
 				name = 'armed',
 				entryCallbacks = [blinkingLED],
 				sound = sfx['armed']
 			),
-			State(
+			_State(
 				name = 'armedCountdown',
 				entryCallbacks = [blinkingLED, partial(startTimer, 30, sfx['armedCountdown'])],
 				exitCallbacks = [stopTimer],
 				sound = sfx['armedCountdown']
 			),
-			State(
+			_State(
 				name = 'triggered',
 				entryCallbacks = [blinkingLED, intruderAlert],
 				sound = sfx['triggered']
@@ -146,29 +185,29 @@ class StateMachine:
 		
 		self.states = st = namedtuple('States', [obj.name for obj in stateObjs])(*stateObjs)
 
-		st.disarmed.addTransition(			SIGNALS.ARM, 			st.disarmedCountdown)
-		st.disarmed.addTransition(			SIGNALS.INSTANT_ARM, 	st.armed)
+		st.disarmed.addTransition(			_SIGNALS.ARM, 			st.disarmedCountdown)
+		st.disarmed.addTransition(			_SIGNALS.INSTANT_ARM, 	st.armed)
 		
-		st.disarmedCountdown.addTransition(	SIGNALS.DISARM, 		st.disarmed)
-		st.disarmedCountdown.addTransition(	SIGNALS.TIMOUT, 		st.armed)
-		st.disarmedCountdown.addTransition(	SIGNALS.INSTANT_ARM, 	st.armed)
+		st.disarmedCountdown.addTransition(	_SIGNALS.DISARM, 		st.disarmed)
+		st.disarmedCountdown.addTransition(	_SIGNALS.TIMOUT, 		st.armed)
+		st.disarmedCountdown.addTransition(	_SIGNALS.INSTANT_ARM, 	st.armed)
 		
-		st.armed.addTransition(				SIGNALS.DISARM, 		st.disarmed)
-		st.armed.addTransition(				SIGNALS.TRIGGER, 		st.armedCountdown)
+		st.armed.addTransition(				_SIGNALS.DISARM, 		st.disarmed)
+		st.armed.addTransition(				_SIGNALS.TRIGGER, 		st.armedCountdown)
 		
-		st.armedCountdown.addTransition(	SIGNALS.DISARM, 		st.disarmed)
-		st.armedCountdown.addTransition(	SIGNALS.TIMOUT, 		st.triggered)
-		st.armedCountdown.addTransition(	SIGNALS.ARM, 			st.armed)
-		st.armedCountdown.addTransition(	SIGNALS.INSTANT_ARM, 	st.armed)
+		st.armedCountdown.addTransition(	_SIGNALS.DISARM, 		st.disarmed)
+		st.armedCountdown.addTransition(	_SIGNALS.TIMOUT, 		st.triggered)
+		st.armedCountdown.addTransition(	_SIGNALS.ARM, 			st.armed)
+		st.armedCountdown.addTransition(	_SIGNALS.INSTANT_ARM, 	st.armed)
 		
-		st.triggered.addTransition(			SIGNALS.DISARM, 		st.disarmed)
-		st.triggered.addTransition(			SIGNALS.ARM, 			st.armed)
-		st.triggered.addTransition(			SIGNALS.INSTANT_ARM, 	st.armed)
+		st.triggered.addTransition(			_SIGNALS.DISARM, 		st.disarmed)
+		st.triggered.addTransition(			_SIGNALS.ARM, 			st.armed)
+		st.triggered.addTransition(			_SIGNALS.INSTANT_ARM, 	st.armed)
 		
 		self.currentState = getattr(self.states, stateFile['state'])
 		
 	def __enter__(self):
-		resetUSBDevice('1-1', logger)
+		_resetUSBDevice('1-1')
 		
 		self.soundLib.start()
 		self.LED.start()
@@ -179,13 +218,13 @@ class StateMachine:
 		
 		def action():
 			if self.currentState == self.states.armed:
-				self.selectState(SIGNALS.TRIGGER)
+				self.selectState(_SIGNALS.TRIGGER)
 		
 		sensitiveStates = (self.states.armed, self.states.armedCountdown, self.states.triggered)
 
 		def actionVideo(pin):
 			if self.currentState in sensitiveStates:
-				self.selectState(SIGNALS.TRIGGER)
+				self.selectState(_SIGNALS.TRIGGER)
 				self.fileDump.addInitiator(pin)
 				while GPIO.input(pin) and self.currentState in sensitiveStates:
 					time.sleep(0.1)
