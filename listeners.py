@@ -45,7 +45,7 @@ class KeypadListener:
 		
 		def getInput():
 			while 1:
-				r, w, x = select([self._dev], [], [])
+				select([self._dev], [], [])
 				for event in self._dev.read():
 					if event.type == 1 and event.value == 1:
 						
