@@ -30,8 +30,9 @@ if __name__ == '__main__':
 		GPIO.setwarnings(False)
 		GPIO.setmode(GPIO.BCM)
 		
+		signal.signal(signal.SIGTERM, sigtermHandler)
+		
 		with StateMachine() as stateMachine:
-			signal.signal(signal.SIGTERM, sigtermHandler)
 			excChildListener()
 
 	except Exception:
