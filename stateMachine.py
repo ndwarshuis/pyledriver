@@ -106,11 +106,12 @@ class _State:
 class StateMachine:
 	def __init__(self):
 		self._lock = Lock()
+		self._managed = []
 		
-		self.soundLib = SoundLib()
-		self.LED = Blinkenlights(17)
-		self.camera = Camera()
-		self.fileDump = FileDump()
+		self.soundLib = self._addManaged(SoundLib())
+		self.fileDump = self._addManaged(FileDump())
+		
+		self._addManaged(Camera())
 		
 		# add signals to self to avoid calling partial every time
 		for sig in _SIGNALS:
@@ -129,14 +130,16 @@ class StateMachine:
 			elif logger:
 				logger.debug('Secret pipe listener received invalid secret')
 	
-		self.secretListener = PipeListener(callback=secretCallback, name= 'secret')
+		self._addManaged(PipeListener(callback=secretCallback, name= 'secret'))
 
-		self.keypadListener = KeypadListener(
-			stateMachine = self,
-			callbackDisarm = self.DISARM,
-			callbackArm = self.ARM,
-			soundLib = self.soundLib,
-			passwd = '5918462'
+		keypadListener = self._addManaged(
+			KeypadListener(
+				stateMachine = self,
+				callbackDisarm = self.DISARM,
+				callbackArm = self.ARM,
+				soundLib = self.soundLib,
+				passwd = '5918462'
+			)
 		)
 		
 		def startTimer(t, sound):
@@ -147,13 +150,14 @@ class StateMachine:
 				self._timer.stop()
 				self._timer = None
 
-		blinkingLED = partial(self.LED.setBlink, True)
+		LED = self._addManaged(Blinkenlights(17))
+		blinkingLED = partial(LED.setBlink, True)
 		sfx = self.soundLib.soundEffects
 
 		stateObjs = [
 			_State(
 				name = 'disarmed',
-				entryCallbacks = [partial(self.LED.setBlink, False)],
+				entryCallbacks = [partial(LED.setBlink, False)],
 				sound = sfx['disarmed']
 			),
 			_State(
@@ -181,7 +185,7 @@ class StateMachine:
 		]
 		
 		for obj in stateObjs:
-			obj.entryCallbacks.append(self.keypadListener.resetBuffer)
+			obj.entryCallbacks.append(keypadListener.resetBuffer)
 		
 		self.states = st = namedtuple('States', [obj.name for obj in stateObjs])(*stateObjs)
 
@@ -209,12 +213,7 @@ class StateMachine:
 	def __enter__(self):
 		_resetUSBDevice('1-1')
 		
-		self.soundLib.start()
-		self.LED.start()
-		self.keypadListener.start()
-		self.secretListener.start()
-		self.camera.start()
-		self.fileDump.start()
+		self._startManaged()
 		
 		def action():
 			if self.currentState == self.states.armed:
@@ -243,11 +242,7 @@ class StateMachine:
 		self.currentState.entry()
 
 	def __exit__(self, exception_type, exception_value, traceback):
-		for i in ['LED', 'camera', 'fileDump', 'soundLib', 'secretListener', 'keypadListener']:
-			try:
-				getattr(self, i).stop()
-			except AttributeError:
-				pass
+		self._stopManaged()
 
 	def selectState(self, signal):
 		with self._lock:
@@ -258,3 +253,15 @@ class StateMachine:
 				self.currentState.entry()
 			
 			stateFile['state'] = self.currentState.name
+			
+	def _addManaged(self, obj):
+		self._managed.append(obj)
+		return obj
+
+	def _startManaged(self):
+		for m in self._managed:
+			m.start()
+	
+	def _stopManaged(self):
+		for m in self._managed:
+			m.stop()
