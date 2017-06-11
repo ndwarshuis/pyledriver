@@ -126,9 +126,6 @@ class _State:
 	def __eq__(self, other):
 		return self.name == other
 		
-	def __hash__(self):
-		return hash(self.name)
-
 class StateMachine:
 	'''
 	Manager for states. This is intended to be used as a context manager (eg
