@@ -11,7 +11,7 @@ the signal-originating child thread.
 '''
 import RPi.GPIO as GPIO
 import time, logging, enum, os
-from threading import Lock
+from threading import Lock, Event
 from functools import partial
 from collections import namedtuple
 

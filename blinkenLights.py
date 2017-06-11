@@ -1,3 +1,6 @@
+'''
+Controls an LED using a GPIO pin
+'''
 import RPi.GPIO as GPIO
 import time, logging
 from threading import Event
@@ -11,7 +14,7 @@ class Blinkenlights(ExceptionThread):
 		self._stopper = Event()
 		self._pin = pin
 		
-		self._blink = False
+		self._blink = Event()
 		self.setCyclePeriod(cyclePeriod) #cyclePeriod is length of one blink cycle in seconds
 		
 		GPIO.setup(pin, GPIO.OUT)
@@ -21,7 +24,7 @@ class Blinkenlights(ExceptionThread):
 			pwm.start(0)
 			while not self._stopper.isSet():
 				t = self._sleeptime
-				if self._blink:
+				if self._blink.is_set():
 					for dc in chain(range(100, -1, -5), range(0, 101, 5)):
 						pwm.ChangeDutyCycle(dc)
 						time.sleep(t)
@@ -45,7 +48,10 @@ class Blinkenlights(ExceptionThread):
 		self._sleeptime = cyclePeriod/20/2
 		
 	def setBlink(self, toggle):
-		self._blink = toggle
+		if toggle:
+			self._blink.set()
+		else:
+			self._blink.clear()
 		
 	def __del__(self):
 		self.stop()
