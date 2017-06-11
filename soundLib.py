@@ -2,7 +2,7 @@
 Implements all sound functionality
 '''
 import logging, os, hashlib, queue, time, psutil
-from threading import Event
+from threading import Event, RLock
 from exceptionThreading import ExceptionThread, async
 from pygame import mixer
 from subprocess import call
@@ -114,6 +114,7 @@ class SoundLib:
 		
 		self._ttsQueue = queue.Queue()
 		self._stopper = Event()
+		self._lock = RLock()
 
 	def start(self):
 		self._startMonitor()
@@ -137,42 +138,44 @@ class SoundLib:
 		
 	@async(daemon=False)
 	def _fader(self, lowerVolume, totalDuration, fadeDuration=0.2, stepSize=5):
-		alarm = self.soundEffects['triggered']
-		alarmVolume = alarm.volume
-		alarmVolumeDelta = alarmVolume - lowerVolume
-		
-		masterVolume = self.volume
-		masterVolumeDelta = self.volume - lowerVolume
-		
-		sleepFadeTime = fadeDuration / stepSize
-		
-		for i in range(0, stepSize):
-			if alarmVolumeDelta > 0:
-				alarm.set_volume(alarmVolume - alarmVolumeDelta * i / stepSize, force=True)
+		with self._lock:
+			alarm = self.soundEffects['triggered']
+			alarmVolume = alarm.volume
+			alarmVolumeDelta = alarmVolume - lowerVolume
+			
+			masterVolume = self.volume
+			masterVolumeDelta = self.volume - lowerVolume
+			
+			sleepFadeTime = fadeDuration / stepSize
+			
+			for i in range(0, stepSize):
+				if alarmVolumeDelta > 0:
+					alarm.set_volume(alarmVolume - alarmVolumeDelta * i / stepSize, force=True)
+					
+				if masterVolumeDelta > 0:
+					self._applyVolumesToSounds(masterVolume - masterVolumeDelta * i / stepSize)
 				
-			if masterVolumeDelta > 0:
-				self._applyVolumesToSounds(masterVolume - masterVolumeDelta * i / stepSize)
-			
-			time.sleep(sleepFadeTime)
-			
-		time.sleep(totalDuration - 2 * fadeDuration)
-		
-		for i in range(stepSize - 1, -1, -1):
-			if alarmVolumeDelta > 0:
-				alarm.set_volume(alarmVolume - alarmVolumeDelta * i / stepSize, force=True)
+				time.sleep(sleepFadeTime)
 				
-			if masterVolumeDelta > 0:
-				self._applyVolumesToSounds(masterVolume - masterVolumeDelta * i / stepSize)
+			time.sleep(totalDuration - 2 * fadeDuration)
 			
-			time.sleep(sleepFadeTime)
+			for i in range(stepSize - 1, -1, -1):
+				if alarmVolumeDelta > 0:
+					alarm.set_volume(alarmVolume - alarmVolumeDelta * i / stepSize, force=True)
+					
+				if masterVolumeDelta > 0:
+					self._applyVolumesToSounds(masterVolume - masterVolumeDelta * i / stepSize)
+				
+				time.sleep(sleepFadeTime)
 	
 	# will not change sounds that have preset volume
 	def _applyVolumesToSounds(self, volume):
-		self.volume = volume
-		v = volume/100
-		s = self.soundEffects
-		for name, sound in s.items():
-			sound.set_volume(v)
+		with self._lock:
+			self.volume = volume
+			v = volume/100
+			s = self.soundEffects
+			for name, sound in s.items():
+				sound.set_volume(v)
 
 	def _ttsMonitor(self):
 		q = self._ttsQueue
