@@ -1,3 +1,6 @@
+'''
+Implements all sound functionality
+'''
 import logging, os, hashlib, queue, time, psutil
 from threading import Event
 from exceptionThreading import ExceptionThread, async
@@ -8,6 +11,13 @@ from collections import OrderedDict
 logger = logging.getLogger(__name__)
 
 class SoundEffect(mixer.Sound):
+	'''
+	Represents one discrete sound effect that can be called and played at will.
+	The clas wraps a mixer.Sound object which maps to one sound file on the
+	disk. In addition, it implements volume and/or loops. The former sets the
+	volume permanently (independent of the user-set volume) and the latter
+	defines how many times to play once called. Both are optional.
+	'''
 	def __init__(self, path, volume=None, loops=0):
 		super().__init__(path)
 		self.path = path
@@ -26,6 +36,10 @@ class SoundEffect(mixer.Sound):
 			mixer.Sound.set_volume(self, volume)
 
 class TTSSound(SoundEffect):
+	'''
+	Special case of a SoundEffect wherein the sound is a speech file dynamically
+	created	by espeak and stored in tmp.
+	'''
 	def __init__(self, path):
 		super().__init__(path, volume=1.0, loops=0)
 		self.size = os.path.getsize(path)
@@ -35,6 +49,11 @@ class TTSSound(SoundEffect):
 			os.remove(self.path)
 
 class TTSCache(OrderedDict):
+	'''
+	Manages a list of all TTSSounds stored in tmp, and remembers the order files
+	have been added. Amount of data shall not exceed memLimit; once memLimit is 
+	exceeded, files will be removed in FIFO manner
+	'''
 	def __init__(self, memLimit):
 		super().__init__()
 		self._memLimit = memLimit
@@ -61,6 +80,13 @@ class TTSCache(OrderedDict):
 			OrderedDict.popitem(self, last=False)
 
 class SoundLib:
+	'''
+	Main wrapper for pygame.mixer, including methods for changing overall
+	volume, handling TTS, and hlding the soundfx table for importation
+	elsewhere. Note that the TTS listener is started as a separate thread,
+	and speech bits are sent to be prcoess with a queue (which is to be passed
+	to other threads)
+	'''
 	
 	_sentinel = None
 	
