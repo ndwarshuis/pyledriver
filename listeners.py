@@ -133,7 +133,9 @@ class KeypadListener:
 		self._clearBuffer()
 
 	def _startResetTimer(self):
-		self._resetTimer = Timer(30, self._clearBuffer)
+		self._resetTimer = t = Timer(30, self._clearBuffer)
+		t.daemon = True
+		t.start()
 		
 	def _stopResetTimer(self):
 		try:
