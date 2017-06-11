@@ -281,7 +281,7 @@ class ThreadedPipeline:
 				_gstPrintMsg(pName, 'Unknown message ELEMENT', sName=msgSrcName)
 
 			elif msgType == Gst.MessageType.UNKNOWN:
-				_gstPrintMsg(pName, 'Unknown message', sName=msgSrcname)
+				_gstPrintMsg(pName, 'Unknown message', sName=msgSrcName)
 		
 	@async(daemon=True)
 	def _mainLoop(self):
