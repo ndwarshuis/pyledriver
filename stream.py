@@ -71,13 +71,13 @@ class ThreadedPipeline:
 		pName = self._pipeline.get_name()
 		stateChange = self._pipeline.set_state(Gst.State.PAUSED)
 		_gstPrintMsg(pName, 'Setting to PAUSED', level=logging.INFO)
-		
-		if stateChange == Gst.StateChangeReturn.FAILURE:
+
+		# we should always end up here because live
+		if stateChange == Gst.StateChangeReturn.NO_PREROLL:
+			_gstPrintMsg(pName, 'Live and does not need preroll')
+		elif stateChange == Gst.StateChangeReturn.FAILURE:
 			_gstPrintMsg(pName, 'Cannot set to PAUSE', level=logging.INFO)
 			self._eventLoop(block=False, doProgress=False, targetState=Gst.State.VOID_PENDING)
-		# we should always end up here because live
-		elif stateChange == Gst.StateChangeReturn.NO_PREROLL:
-			_gstPrintMsg(pName, 'Live and does not need preroll')
 		elif stateChange == Gst.StateChangeReturn.ASYNC:
 			_gstPrintMsg(pName, 'Prerolling')
 			try:
@@ -105,11 +105,8 @@ class ThreadedPipeline:
 					err = self._pipeline.get_bus().pop_filtered(Gst.MessageType.Error)
 					_processErrorMessage(pName, msgSrcName, err)
 			
-			# ...we end up here and loop until Tool releases their next album
-			try:
-				self._mainLoop()
-			except:
-				raise GstException
+			# ...we end up here and fork to a child thread
+			self._mainLoop()
 	
 	# TODO: this might not all be necessary
 	def stop(self):
