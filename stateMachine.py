@@ -137,7 +137,6 @@ class StateMachine:
 				stateMachine = self,
 				callbackDisarm = self.DISARM,
 				callbackArm = self.ARM,
-				soundLib = self.soundLib,
 				passwd = '5918462'
 			)
 		)

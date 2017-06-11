@@ -23,7 +23,7 @@ class KeypadListener:
 	- input listener that accepts events and reacts in fun ways
 	- countdown timer to reset the input buffer after 30 seconds of inactivity
 	'''
-	def __init__(self, stateMachine, callbackDisarm, callbackArm, soundLib, passwd):
+	def __init__(self, stateMachine, callbackDisarm, callbackArm, passwd):
 		
 		ctrlKeys = { 69: 'NUML', 98: '/', 14: 'BS', 96: 'ENTER'}
 		
@@ -35,6 +35,8 @@ class KeypadListener:
 			79: '1', 80: '2', 81: '3',
 			82: '0', 83: '.'
 		}
+		
+		soundLib = stateMachine.soundLib
 		
 		numKeySound = soundLib.soundEffects['numKey']
 		ctrlKeySound = soundLib.soundEffects['ctrlKey']
