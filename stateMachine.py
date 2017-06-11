@@ -1,3 +1,14 @@
+'''
+Controls and manages state of the alarm system. The design follows a reactor-
+like model (similar to twisted) except the statemachine itself is passive (eg it
+does not run/block on its own thread waiting for events). Instead the
+StateMachine object holds the current status as well as the logic to move
+between states, while child threads (listeners) deliver signals to the state
+machine in response to external events. The state machine itself does not "wait"
+but rather its selectState method could be called within any child thread (hence
+the lock) which also means the entry/exit functions of each state are run within
+the signal-originating child thread.
+'''
 import RPi.GPIO as GPIO
 import time, logging, enum, os
 from threading import Lock
@@ -17,6 +28,10 @@ from stream import Camera, FileDump
 logger = logging.getLogger(__name__)
 
 class _SIGNALS(enum.Enum):
+	'''
+	Valid signals the statemachine can recieve. The consequence of each signal
+	depends on the current state
+	'''
 	ARM = enum.auto()
 	INSTANT_ARM = enum.auto()
 	DISARM = enum.auto()
@@ -63,6 +78,17 @@ def _resetUSBDevice(device):
 	logger.debug('Reset USB device: %s', devpath)
 
 class _State:
+	'''
+	Represents one discrete status of the system. Each state has a set of entry
+	and exit functions and optionaly has sound that can play upon state entry.
+	States link to other states via the addTransition function, which links
+	another state with a signal. In this way, many states can be linked together
+	in a network.
+	
+	There is currently nothing stopping multiple states from sharing the same
+	name...try not to be an idiot. This mostly matters in equality tests, which
+	only compares the name
+	'''
 	def __init__(self, name, entryCallbacks=[], exitCallbacks=[], sound=None):
 		self.name = name
 		self.entryCallbacks = entryCallbacks
@@ -104,6 +130,32 @@ class _State:
 		return hash(self.name)
 
 class StateMachine:
+	'''
+	Manager for states. This is intended to be used as a context manager (eg
+	"with" statement) for brevity...and because there should only be one.
+	
+	Init is responsible for setting up all objects (including child threads) as
+	well as contructing the state network. Each thread functions as some kind of
+	listener (or supports one) that wait for an event to happen.
+	
+	Note we distinguish between "managed" and "non-managed" objects; the former
+	need to be started/stopped to ensure things get cleaned. Managed objects are
+	added to the managed list with _addManaged, which also returns a ref to the 
+	object for other uses.
+	
+	Upon opening the context, all threads are started. Note that not all threads
+	are managed; some are started and forgotten, as these require no cleanup.
+	Managed threads are started with _startManaged and stopped with _stopManaged
+	upon closing the context. This system has the added benefit of not trying to
+	stop an object that has not been initialized, as it cannot appear in the
+	managed list otherwise
+	
+	During steady-state operation, the receiver for signals that make things
+	happen is selectState, intended to be called from any of the state machine's
+	child threads. This calls the current state's "next" method and sets the
+	result as the new current state. Note the lock because it could be called by
+	any number of listeners simultaneously
+	'''
 	def __init__(self):
 		self._lock = Lock()
 		self._managed = []
@@ -212,6 +264,7 @@ class StateMachine:
 	def __enter__(self):
 		_resetUSBDevice('1-1')
 		
+		# start all managed threads (we retain ref to these to stop them later)
 		self._startManaged()
 		
 		def action():
@@ -228,6 +281,7 @@ class StateMachine:
 					time.sleep(0.1)
 				self.fileDump.removeInitiator(pin)
 
+		# start non-managed threads (we forget about these because they can exit with no cleanup)
 		startMotionSensor(5, 'Nate\'s room', action)
 		startMotionSensor(19, 'front door', action)
 		startMotionSensor(26, 'Laura\'s room', action)
