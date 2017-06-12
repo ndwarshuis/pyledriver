@@ -3,6 +3,8 @@
 import os, time, signal, traceback, logging
 import RPi.GPIO as GPIO
 
+os.chdir(os.path.dirname(os.path.realpath(__file__)))
+
 from sharedLogging import unmountGluster # this should be first program module
 from stateMachine import StateMachine
 from exceptionThreading import excChildListener, excStopper
@@ -25,8 +27,6 @@ def sigtermHandler(signum, stackFrame):
 
 if __name__ == '__main__':
 	try:
-		os.chdir(os.path.dirname(os.path.realpath(__file__)))
-		
 		GPIO.setwarnings(False)
 		GPIO.setmode(GPIO.BCM)
 		
