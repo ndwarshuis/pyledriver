@@ -1,4 +1,4 @@
-#! /bin/python
+#! /usr/bin/env python3
 
 import os, time, signal, traceback, logging
 import RPi.GPIO as GPIO
