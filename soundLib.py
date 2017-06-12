@@ -108,13 +108,13 @@ class SoundLib:
 		}
 
 		self._ttsSounds = TTSCache(psutil.virtual_memory().total * 0.001)
+		self._lock = RLock()
 		
 		self.volume = 100
 		self._applyVolumesToSounds(self.volume)
 		
 		self._ttsQueue = queue.Queue()
 		self._stopper = Event()
-		self._lock = RLock()
 
 	def start(self):
 		self._startMonitor()
