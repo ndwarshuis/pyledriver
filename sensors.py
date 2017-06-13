@@ -13,7 +13,7 @@ logger.setLevel(logging.INFO)
 # delay GPIO init to avoid false positive during powerup
 INIT_DELAY = 60
 
-def lowPassFilter(pin, targetVal, period=0.001):
+def _lowPassFilter(pin, targetVal, period=0.001):
 	divisions = 10
 	sleepTime = period/divisions
 	
@@ -33,7 +33,7 @@ def startMotionSensor(pin, location, action):
 	name = 'MotionSensor@' + location
 
 	def trip(channel):
-		if lowPassFilter(pin, 1):
+		if _lowPassFilter(pin, 1):
 			action(location, logger)
 	
 	logger.debug('waiting %s for %s to power on', INIT_DELAY, name)
@@ -47,7 +47,7 @@ def startDoorSensor(pin, action):
 		val = GPIO.input(pin)
 		
 		if val != closed:
-			if lowPassFilter(pin, val):
+			if _lowPassFilter(pin, val):
 				closed = val
 				action(closed, logger)
 	
