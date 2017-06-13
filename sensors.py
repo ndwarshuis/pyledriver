@@ -5,8 +5,10 @@ from threading import Timer
 
 logger = logging.getLogger(__name__)
 
-# this should never be higher than INFO or motion will never be logged
-logger.setLevel(logging.DEBUG)
+# this importantly controls which sensor events get logged. DEBUG logs
+# everything, INFO logs only events that occur when state machine in
+# "sensitive states" (armed, armedCountdown, triggered)
+logger.setLevel(logging.INFO)
 
 # delay GPIO init to avoid false positive during powerup
 INIT_DELAY = 60
@@ -32,15 +34,14 @@ def startMotionSensor(pin, location, action):
 
 	def trip(channel):
 		if lowPassFilter(pin, 1):
-			logger.info('detected motion: ' + location)
-			action()
+			action(location, logger)
 	
 	logger.debug('waiting %s for %s to power on', INIT_DELAY, name)
 	t = Timer(INIT_DELAY, partial(_initGPIO, name, pin, GPIO.RISING, trip))
 	t.daemon = True
 	t.start()
 
-def startDoorSensor(pin, action, sound=None):
+def startDoorSensor(pin, action):
 	def trip(channel):
 		nonlocal closed
 		val = GPIO.input(pin)
@@ -48,15 +49,7 @@ def startDoorSensor(pin, action, sound=None):
 		if val != closed:
 			if lowPassFilter(pin, val):
 				closed = val
-				if closed:
-					logger.info('door closed')
-					if sound:
-						sound.play()
-				else:
-					logger.info('door opened')
-					if sound:
-						sound.play()
-					action()
+				action(closed, logger)
 	
 	_initGPIO('DoorSensor', pin, GPIO.BOTH, trip)
 	closed = GPIO.input(pin)

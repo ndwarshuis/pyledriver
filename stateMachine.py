@@ -264,28 +264,41 @@ class StateMachine:
 		# start all managed threads (we retain ref to these to stop them later)
 		self._startManaged()
 		
-		def action():
+		sensitiveStates = (self.states.armed, self.states.armedCountdown, self.states.triggered)
+		
+		def sensorAction(location, logger):
+			level = logging.INFO if self.currentState in sensitiveStates else logging.DEBUG
+			logger.log(level, 'detected motion: ' + location)
 			if self.currentState == self.states.armed:
 				self.selectState(_SIGNALS.TRIGGER)
-		
-		sensitiveStates = (self.states.armed, self.states.armedCountdown, self.states.triggered)
 
-		def actionVideo(pin):
+		def videoAction(location, logger, pin):
+			sensorAction(location, logger)
 			if self.currentState in sensitiveStates:
-				self.selectState(_SIGNALS.TRIGGER)
 				self.fileDump.addInitiator(pin)
 				while GPIO.input(pin) and self.currentState in sensitiveStates:
 					time.sleep(0.1)
 				self.fileDump.removeInitiator(pin)
 
+		def doorAction(closed, logger):
+			self.soundLib.soundEffects['door'].play()
+			
+			level = logging.INFO if self.currentState in sensitiveStates else logging.DEBUG
+			entry = 'door closed' if closed else 'door opened'
+			logger.log(level, entry)
+				
+			if not closed and self.currentState == self.states.armed:
+				self.selectState(_SIGNALS.TRIGGER)
+
 		# start non-managed threads (we forget about these because they can exit with no cleanup)
-		startMotionSensor(5, 'Nate\'s room', action)
-		startMotionSensor(19, 'front door', action)
-		startMotionSensor(26, 'Laura\'s room', action)
-		startMotionSensor(6, 'deck window', partial(actionVideo, 6))
-		startMotionSensor(13, 'kitchen bar', partial(actionVideo, 13))
+		startMotionSensor(5, 'Nate\'s room', sensorAction)
+		startMotionSensor(19, 'front door', sensorAction)
+		startMotionSensor(26, 'Laura\'s room', sensorAction)
 		
-		startDoorSensor(22, action, self.soundLib.soundEffects['door'])
+		startMotionSensor(6, 'deck window', partial(videoAction, pin=6))
+		startMotionSensor(13, 'kitchen bar', partial(videoAction, pin=13))
+		
+		startDoorSensor(22, doorAction)
 		
 		startWebInterface(self)
 		
