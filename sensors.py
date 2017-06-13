@@ -25,7 +25,7 @@ def lowPassFilter(pin, targetVal, period=0.001):
 	return GPIO.input(pin) == targetVal
 
 def _initGPIO(name, pin, GPIOEvent, callback):
-	logger.info('setting up \"%s\" on pin %s', name, pin)
+	logger.debug('starting \"%s\" on pin %s', name, pin)
 	GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 	GPIO.add_event_detect(pin, GPIOEvent, callback=callback, bouncetime=500)
 
