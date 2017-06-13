@@ -85,6 +85,8 @@ class KeypadListener:
 								self._buf = self._buf[:-1]
 								if self._buf == '':
 									self._stopResetTimer()
+								else:
+									self._startResetTimer()
 								backspaceSound.play()
 							
 							# reset buffer
