@@ -68,6 +68,7 @@ class KeypadListener:
 									if self._buf == '':
 										ctrlKeySound.play()
 									elif self._buf == passwd:
+										self.resetBuffer()
 										callbackDisarm()
 									else:
 										self.resetBuffer()
@@ -75,6 +76,7 @@ class KeypadListener:
 							
 							# arm
 							elif val == 'NUML':
+								self.resetBuffer()
 								callbackArm()
 								ctrlKeySound.play()
 								

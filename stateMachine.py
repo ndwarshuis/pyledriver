@@ -181,14 +181,8 @@ class StateMachine:
 	
 		self._addManaged(PipeListener(callback=secretCallback, name= 'secret'))
 
-		keypadListener = self._addManaged(
-			KeypadListener(
-				stateMachine = self,
-				callbackDisarm = self.DISARM,
-				callbackArm = self.ARM,
-				passwd = '5918462'
-			)
-		)
+		self._addManaged(KeypadListener(stateMachine=self, callbackDisarm=self.DISARM,
+			callbackArm=self.ARM, passwd='5918462'))
 		
 		def startTimer(t, sound):
 			self._timer = _CountdownTimer(t, self.TIMOUT, sound)
@@ -231,9 +225,6 @@ class StateMachine:
 				sound = sfx['triggered']
 			)
 		]
-		
-		for obj in stateObjs:
-			obj.entryCallbacks.append(keypadListener.resetBuffer)
 		
 		self.states = st = namedtuple('States', [obj.name for obj in stateObjs])(*stateObjs)
 
