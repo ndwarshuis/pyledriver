@@ -23,17 +23,17 @@ class KeypadListener:
 	- input listener that accepts events and reacts in fun ways
 	- countdown timer to reset the input buffer after 30 seconds of inactivity
 	'''
-	def __init__(self, stateMachine, callbackDisarm, callbackArm, passwd):
+	def __init__(self, stateMachine, passwd):
 		
-		ctrlKeys = { 69: 'NUML', 98: '/', 14: 'BS', 96: 'ENTER'}
+		ctrlKeys = { 69: 'NUML', 98: '/', 55: '*', 14: 'BS', 96: 'ENTER'}
 		
-		volKeys = { 55: '*', 74: '-', 78: '+'}
+		volKeys = { 74: '-', 78: '+', 83: '.'}
 		
 		numKeys = {
 			71: '7', 72: '8', 73: '9',
 			75: '4', 76: '5', 77: '6',
 			79: '1', 80: '2', 81: '3',
-			82: '0', 83: '.'
+			82: '0'
 		}
 		
 		soundLib = stateMachine.soundLib
@@ -69,15 +69,27 @@ class KeypadListener:
 										ctrlKeySound.play()
 									elif self._buf == passwd:
 										self.resetBuffer()
-										callbackDisarm()
+										stateMachine.DISARM
 									else:
 										self.resetBuffer()
 										wrongPassSound.play()
-							
-							# arm
+
+							# lock
 							elif val == 'NUML':
 								self.resetBuffer()
-								callbackArm()
+								stateMachine.LOCK
+								ctrlKeySound.play()
+
+							# instant lock
+							elif val == '/':
+								self.resetBuffer()
+								stateMachine.INSTANT_LOCK
+								ctrlKeySound.play()
+								
+							# arm
+							elif val == '*':
+								self.resetBuffer()
+								stateMachine.ARM
 								ctrlKeySound.play()
 								
 							# delete last char in buffer
@@ -89,11 +101,6 @@ class KeypadListener:
 									self._startResetTimer()
 								backspaceSound.play()
 							
-							# reset buffer
-							elif val == '/':
-								self.resetBuffer()
-								backspaceSound.play()
-						
 						# volume input
 						elif event.code in volKeys:
 							val = volKeys[event.code]
@@ -104,7 +111,7 @@ class KeypadListener:
 							elif val == '-':
 								soundLib.changeVolume(-10)
 								
-							elif val == '*':
+							elif val == '.':
 								soundLib.mute()
 
 							ctrlKeySound.play()

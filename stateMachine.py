@@ -183,10 +183,9 @@ class StateMachine:
 			elif logger:
 				logger.debug('Secret pipe listener received invalid secret')
 	
-		self._addManaged(PipeListener(callback=secretCallback, name= 'secret'))
+		self._addManaged(PipeListener(callback=secretCallback, name='secret'))
 
-		self._addManaged(KeypadListener(stateMachine=self, callbackDisarm=self.DISARM,
-			callbackArm=self.ARM, passwd='5918462'))
+		self._addManaged(KeypadListener(stateMachine=self, passwd='5918462'))
 		
 		def startTimer(t, sound):
 			self._timer = _CountdownTimer(t, self.TIMOUT, sound)
