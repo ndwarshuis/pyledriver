@@ -25,14 +25,14 @@ class Blinkenlights(ExceptionThread):
 		def blinkLights():
 			pwm.start(0)
 			while not self._stopper.isSet():
-				t = self._sleeptime
 				if self._blink.is_set():
+					t = self._sleeptime
 					for dc in chain(range(100, -1, -5), range(0, 101, 5)):
 						pwm.ChangeDutyCycle(dc)
 						time.sleep(t)
 				else:
 					pwm.ChangeDutyCycle(100)
-					time.sleep(t)
+					self._blink.wait()			
 			pwm.stop() # required to avoid core dumps when process terminates
 
 		super().__init__(target=blinkLights, daemon=True)
@@ -44,6 +44,7 @@ class Blinkenlights(ExceptionThread):
 	def stop(self):
 		if self.is_alive():
 			self._stopper.set()
+			self._blink.set()
 			logger.debug('Stopping LED on pin %s', self._pin)
 
 	def setCyclePeriod(self, cyclePeriod):
