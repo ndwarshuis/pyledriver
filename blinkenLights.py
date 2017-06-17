@@ -3,7 +3,7 @@ Controls an LED using a GPIO pin
 '''
 import RPi.GPIO as GPIO
 import time, logging
-from threading import Event
+from threading import Event, Lock
 from exceptionThreading import ExceptionThread
 from itertools import chain
 
@@ -12,9 +12,11 @@ logger = logging.getLogger(__name__)
 class Blinkenlights(ExceptionThread):
 	def __init__(self, pin, cyclePeriod=2):
 		self._stopper = Event()
+		self._blink = Event()
+		self._lock = Lock()
+		
 		self._pin = pin
 		
-		self._blink = Event()
 		self.setCyclePeriod(cyclePeriod) #cyclePeriod is length of one blink cycle in seconds
 		
 		GPIO.setup(pin, GPIO.OUT)
@@ -45,7 +47,8 @@ class Blinkenlights(ExceptionThread):
 			logger.debug('Stopping LED on pin %s', self._pin)
 
 	def setCyclePeriod(self, cyclePeriod):
-		self._sleeptime = cyclePeriod/20/2
+		with self._lock:
+			self._sleeptime = cyclePeriod/20/2
 		
 	def setBlink(self, toggle):
 		if toggle:
