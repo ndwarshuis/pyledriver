@@ -69,6 +69,7 @@ class GlusterFSHandler(TimedRotatingFileHandler):
 		except CalledProcessError as e:
 			stderr = e.stderr.decode('ascii').rstrip()
 			logger.error(stderr)
+			# TODO: this raises lots of noise when it can't unmount
 			raise SystemExit
 			
 	def close(self):
