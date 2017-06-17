@@ -34,6 +34,8 @@ class _SIGNALS(enum.Enum):
 	'''
 	ARM = enum.auto()
 	INSTANT_ARM = enum.auto()
+	LOCK = enum.auto()
+	INSTANT_LOCK = enum.auto()
 	DISARM = enum.auto()
 	TIMOUT = enum.auto()
 	TRIGGER = enum.auto()
@@ -169,7 +171,9 @@ class StateMachine:
 		secretTable = {
 			'dynamoHum': self.DISARM,
 			'zombyWoof': self.ARM,
-			'imTheSlime': self.INSTANT_ARM
+			'imTheSlime': self.INSTANT_ARM,
+			'fiftyFifty': self.LOCK,
+			'dentalFloss': self.INSTANT_LOCK
 		}
 		
 		def secretCallback(secret, logger):
@@ -214,6 +218,17 @@ class StateMachine:
 				sound = sfx['armed']
 			),
 			_State(
+				name = 'lockedCountdown',
+				entryCallbacks = [blinkingLED, partial(startTimer, 30, sfx['disarmedCountdown'])],
+				exitCallbacks = [stopTimer],
+				sound = sfx['disarmedCountdown']
+			),
+			_State(
+				name = 'locked',
+				entryCallbacks = [blinkingLED],
+				sound = sfx['armed']
+			),
+			_State(
 				name = 'armedCountdown',
 				entryCallbacks = [blinkingLED, partial(startTimer, 30, sfx['armedCountdown'])],
 				exitCallbacks = [stopTimer],
@@ -230,22 +245,43 @@ class StateMachine:
 
 		st.disarmed.addTransition(			_SIGNALS.ARM, 			st.disarmedCountdown)
 		st.disarmed.addTransition(			_SIGNALS.INSTANT_ARM, 	st.armed)
+		st.disarmed.addTransition(			_SIGNALS.LOCK, 			st.lockedCountdown)
+		st.disarmed.addTransition(			_SIGNALS.INSTANT_LOCK, 	st.locked)
 		
 		st.disarmedCountdown.addTransition(	_SIGNALS.DISARM, 		st.disarmed)
 		st.disarmedCountdown.addTransition(	_SIGNALS.TIMOUT, 		st.armed)
 		st.disarmedCountdown.addTransition(	_SIGNALS.INSTANT_ARM, 	st.armed)
+		st.disarmedCountdown.addTransition(	_SIGNALS.LOCK, 			st.lockedCountdown)
+		st.disarmedCountdown.addTransition(	_SIGNALS.INSTANT_LOCK, 	st.locked)
 		
 		st.armed.addTransition(				_SIGNALS.DISARM, 		st.disarmed)
 		st.armed.addTransition(				_SIGNALS.TRIGGER, 		st.armedCountdown)
+		st.armed.addTransition(				_SIGNALS.LOCK, 			st.lockedCountdown)
+		st.armed.addTransition(				_SIGNALS.INSTANT_LOCK,	st.locked)
+		
+		st.lockedCountdown.addTransition(	_SIGNALS.DISARM, 		st.disarmed)
+		st.lockedCountdown.addTransition(	_SIGNALS.TIMOUT, 		st.locked)
+		st.lockedCountdown.addTransition(	_SIGNALS.INSTANT_LOCK, 	st.locked)
+		st.lockedCountdown.addTransition(	_SIGNALS.ARM, 			st.disarmedCountdown)
+		st.lockedCountdown.addTransition(	_SIGNALS.INSTANT_ARM, 	st.armed)
+		
+		st.locked.addTransition(			_SIGNALS.DISARM, 		st.disarmed)
+		st.locked.addTransition(			_SIGNALS.TRIGGER, 		st.armedCountdown)
+		st.locked.addTransition(			_SIGNALS.ARM, 			st.disarmedCountdown)
+		st.locked.addTransition(			_SIGNALS.INSTANT_ARM, 	st.armed)
 		
 		st.armedCountdown.addTransition(	_SIGNALS.DISARM, 		st.disarmed)
 		st.armedCountdown.addTransition(	_SIGNALS.TIMOUT, 		st.triggered)
 		st.armedCountdown.addTransition(	_SIGNALS.ARM, 			st.armed)
 		st.armedCountdown.addTransition(	_SIGNALS.INSTANT_ARM, 	st.armed)
+		st.armedCountdown.addTransition(	_SIGNALS.LOCK, 			st.locked)
+		st.armedCountdown.addTransition(	_SIGNALS.INSTANT_LOCK,	st.locked)
 		
 		st.triggered.addTransition(			_SIGNALS.DISARM, 		st.disarmed)
 		st.triggered.addTransition(			_SIGNALS.ARM, 			st.armed)
 		st.triggered.addTransition(			_SIGNALS.INSTANT_ARM, 	st.armed)
+		st.triggered.addTransition(			_SIGNALS.LOCK, 			st.locked)
+		st.triggered.addTransition(			_SIGNALS.INSTANT_LOCK,	st.locked)
 		
 		self.currentState = getattr(self.states, stateFile['state'])
 		
@@ -255,30 +291,33 @@ class StateMachine:
 		# start all managed threads (we retain ref to these to stop them later)
 		self._startManaged()
 		
-		sensitiveStates = (self.states.armed, self.states.armedCountdown, self.states.triggered)
+		activeSensorStates = (self.states.armed, self.states.armedCountdown, self.states.triggered)
 		
 		def sensorAction(location, logger):
-			level = logging.INFO if self.currentState in sensitiveStates else logging.DEBUG
+			cst = self.currentState
+			level = logging.INFO if cst in activeSensorStates else logging.DEBUG
 			logger.log(level, 'detected motion: ' + location)
-			if self.currentState == self.states.armed:
+			if cst == self.states.armed:
 				self.selectState(_SIGNALS.TRIGGER)
 
 		def videoAction(location, logger, pin):
 			sensorAction(location, logger)
-			if self.currentState in sensitiveStates:
+			cst = self.currentState
+			if cst in activeSensorStates:
 				self.fileDump.addInitiator(pin)
-				while GPIO.input(pin) and self.currentState in sensitiveStates:
+				while GPIO.input(pin) and cst in activeSensorStates:
 					time.sleep(0.1)
 				self.fileDump.removeInitiator(pin)
+				
+		activeDoorStates = activeSensorStates + (self.states.locked,)
 
 		def doorAction(closed, logger):
 			self.soundLib.soundEffects['door'].play()
-			
-			level = logging.INFO if self.currentState in sensitiveStates else logging.DEBUG
+			cst = self.currentState
+			level = logging.INFO if cst in activeDoorStates else logging.DEBUG
 			entry = 'door closed' if closed else 'door opened'
 			logger.log(level, entry)
-				
-			if not closed and self.currentState == self.states.armed:
+			if not closed and cst == self.states.armed or cst == self.states.locked:
 				self.selectState(_SIGNALS.TRIGGER)
 
 		# start non-managed threads (we forget about these because they can exit with no cleanup)
