@@ -95,13 +95,13 @@ class SoundLib:
 		mixer.init()
 		
 		self.soundEffects = {
-			'disarmedCountdown':	SoundEffect(path='soundfx/smb_kick.wav'),
 			'disarmed':				SoundEffect(path='soundfx/smb_pause.wav'),
+			'armedCountdown':		SoundEffect(path='soundfx/smb_kick.wav'),
 			'armed':				SoundEffect(path='soundfx/smb_powerup.wav'),
-			'armedCountdown':		SoundEffect(path='soundfx/smb2_door_appears.wav'),
-			'locked':				SoundEffect(path='soundfx/smb_1-up.wav'),
 			'lockedCountdown':		SoundEffect(path='soundfx/smb_stomp.wav'),
-			'triggered':			SoundEffect(path='soundfx/alarms/burgler_alarm.ogg', volume=1.0, loops=-1),
+			'locked':				SoundEffect(path='soundfx/smb_1-up.wav'),
+			'trippedCountdown':		SoundEffect(path='soundfx/smb2_door_appears.wav'),
+			'tripped':				SoundEffect(path='soundfx/alarms/burgler_alarm.ogg', volume=1.0, loops=-1),
 			'door':					SoundEffect(path='soundfx/smb_pipe.wav'),
 			'numKey':				SoundEffect(path='soundfx/smb_bump.wav'),
 			'ctrlKey':				SoundEffect(path='soundfx/smb_fireball.wav'),
@@ -141,7 +141,7 @@ class SoundLib:
 	@async(daemon=False)
 	def _fader(self, lowerVolume, totalDuration, fadeDuration=0.2, stepSize=5):
 		with self._lock:
-			alarm = self.soundEffects['triggered']
+			alarm = self.soundEffects['tripped']
 			alarmVolume = alarm.volume
 			alarmVolumeDelta = alarmVolume - lowerVolume
 			

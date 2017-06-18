@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 # this importantly controls which sensor events get logged. DEBUG logs
 # everything, INFO logs only events that occur when state machine in
-# "sensitive states" (armed, armedCountdown, triggered)
+# "sensitive states" (armed, trippedCountdown, tripped)
 logger.setLevel(logging.INFO)
 
 # delay GPIO init to avoid false positive during powerup

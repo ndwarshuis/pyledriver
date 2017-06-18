@@ -38,7 +38,7 @@ class _SIGNALS(enum.Enum):
 	INSTANT_LOCK = enum.auto()
 	DISARM = enum.auto()
 	TIMOUT = enum.auto()
-	TRIGGER = enum.auto()
+	TRIP = enum.auto()
 	
 class _CountdownTimer(ExceptionThread):
 	'''
@@ -216,10 +216,10 @@ class StateMachine:
 				sound = sfx['disarmed']
 			),
 			_State(
-				name = 'disarmedCountdown',
-				entryCallbacks = [partial(squareBlink, 1), partial(startTimer, 30, sfx['disarmedCountdown'])],
+				name = 'armedCountdown',
+				entryCallbacks = [partial(squareBlink, 1), partial(startTimer, 30, sfx['armedCountdown'])],
 				exitCallbacks = [stopTimer],
-				sound = sfx['disarmedCountdown']
+				sound = sfx['armedCountdown']
 			),
 			_State(
 				name = 'armed',
@@ -238,59 +238,59 @@ class StateMachine:
 				sound = sfx['locked']
 			),
 			_State(
-				name = 'armedCountdown',
-				entryCallbacks = [partial(squareBlink, 1), partial(startTimer, 30, sfx['armedCountdown'])],
+				name = 'trippedCountdown',
+				entryCallbacks = [partial(squareBlink, 1), partial(startTimer, 30, sfx['trippedCountdown'])],
 				exitCallbacks = [stopTimer],
-				sound = sfx['armedCountdown']
+				sound = sfx['trippedCountdown']
 			),
 			_State(
-				name = 'triggered',
+				name = 'tripped',
 				entryCallbacks = [partial(linearBlink, 0.5), intruderAlert],
-				sound = sfx['triggered']
+				sound = sfx['tripped']
 			)
 		]
 		
 		self.states = st = namedtuple('States', [obj.name for obj in stateObjs])(*stateObjs)
 
-		st.disarmed.addTransition(			_SIGNALS.ARM, 			st.disarmedCountdown)
+		st.disarmed.addTransition(			_SIGNALS.ARM, 			st.armedCountdown)
 		st.disarmed.addTransition(			_SIGNALS.INSTANT_ARM, 	st.armed)
 		st.disarmed.addTransition(			_SIGNALS.LOCK, 			st.lockedCountdown)
 		st.disarmed.addTransition(			_SIGNALS.INSTANT_LOCK, 	st.locked)
 		
-		st.disarmedCountdown.addTransition(	_SIGNALS.DISARM, 		st.disarmed)
-		st.disarmedCountdown.addTransition(	_SIGNALS.TIMOUT, 		st.armed)
-		st.disarmedCountdown.addTransition(	_SIGNALS.INSTANT_ARM, 	st.armed)
-		st.disarmedCountdown.addTransition(	_SIGNALS.LOCK, 			st.lockedCountdown)
-		st.disarmedCountdown.addTransition(	_SIGNALS.INSTANT_LOCK, 	st.locked)
+		st.armedCountdown.addTransition(	_SIGNALS.DISARM, 		st.disarmed)
+		st.armedCountdown.addTransition(	_SIGNALS.TIMOUT, 		st.armed)
+		st.armedCountdown.addTransition(	_SIGNALS.INSTANT_ARM, 	st.armed)
+		st.armedCountdown.addTransition(	_SIGNALS.LOCK, 			st.lockedCountdown)
+		st.armedCountdown.addTransition(	_SIGNALS.INSTANT_LOCK, 	st.locked)
 		
 		st.armed.addTransition(				_SIGNALS.DISARM, 		st.disarmed)
-		st.armed.addTransition(				_SIGNALS.TRIGGER, 		st.armedCountdown)
+		st.armed.addTransition(				_SIGNALS.TRIP, 			st.trippedCountdown)
 		st.armed.addTransition(				_SIGNALS.LOCK, 			st.lockedCountdown)
 		st.armed.addTransition(				_SIGNALS.INSTANT_LOCK,	st.locked)
 		
 		st.lockedCountdown.addTransition(	_SIGNALS.DISARM, 		st.disarmed)
 		st.lockedCountdown.addTransition(	_SIGNALS.TIMOUT, 		st.locked)
 		st.lockedCountdown.addTransition(	_SIGNALS.INSTANT_LOCK, 	st.locked)
-		st.lockedCountdown.addTransition(	_SIGNALS.ARM, 			st.disarmedCountdown)
+		st.lockedCountdown.addTransition(	_SIGNALS.ARM, 			st.armedCountdown)
 		st.lockedCountdown.addTransition(	_SIGNALS.INSTANT_ARM, 	st.armed)
 		
 		st.locked.addTransition(			_SIGNALS.DISARM, 		st.disarmed)
-		st.locked.addTransition(			_SIGNALS.TRIGGER, 		st.armedCountdown)
-		st.locked.addTransition(			_SIGNALS.ARM, 			st.disarmedCountdown)
+		st.locked.addTransition(			_SIGNALS.TRIP, 			st.trippedCountdown)
+		st.locked.addTransition(			_SIGNALS.ARM, 			st.armedCountdown)
 		st.locked.addTransition(			_SIGNALS.INSTANT_ARM, 	st.armed)
 		
-		st.armedCountdown.addTransition(	_SIGNALS.DISARM, 		st.disarmed)
-		st.armedCountdown.addTransition(	_SIGNALS.TIMOUT, 		st.triggered)
-		st.armedCountdown.addTransition(	_SIGNALS.ARM, 			st.armed)
-		st.armedCountdown.addTransition(	_SIGNALS.INSTANT_ARM, 	st.armed)
-		st.armedCountdown.addTransition(	_SIGNALS.LOCK, 			st.locked)
-		st.armedCountdown.addTransition(	_SIGNALS.INSTANT_LOCK,	st.locked)
+		st.trippedCountdown.addTransition(	_SIGNALS.DISARM, 		st.disarmed)
+		st.trippedCountdown.addTransition(	_SIGNALS.TIMOUT, 		st.tripped)
+		st.trippedCountdown.addTransition(	_SIGNALS.ARM, 			st.armed)
+		st.trippedCountdown.addTransition(	_SIGNALS.INSTANT_ARM, 	st.armed)
+		st.trippedCountdown.addTransition(	_SIGNALS.LOCK, 			st.locked)
+		st.trippedCountdown.addTransition(	_SIGNALS.INSTANT_LOCK,	st.locked)
 		
-		st.triggered.addTransition(			_SIGNALS.DISARM, 		st.disarmed)
-		st.triggered.addTransition(			_SIGNALS.ARM, 			st.armed)
-		st.triggered.addTransition(			_SIGNALS.INSTANT_ARM, 	st.armed)
-		st.triggered.addTransition(			_SIGNALS.LOCK, 			st.locked)
-		st.triggered.addTransition(			_SIGNALS.INSTANT_LOCK,	st.locked)
+		st.tripped.addTransition(			_SIGNALS.DISARM, 		st.disarmed)
+		st.tripped.addTransition(			_SIGNALS.ARM, 			st.armed)
+		st.tripped.addTransition(			_SIGNALS.INSTANT_ARM, 	st.armed)
+		st.tripped.addTransition(			_SIGNALS.LOCK, 			st.locked)
+		st.tripped.addTransition(			_SIGNALS.INSTANT_LOCK,	st.locked)
 		
 		self.currentState = getattr(self.states, stateFile['state'])
 		
@@ -300,14 +300,14 @@ class StateMachine:
 		# start all managed threads (we retain ref to these to stop them later)
 		self._startManaged()
 		
-		activeSensorStates = (self.states.armed, self.states.armedCountdown, self.states.triggered)
+		activeSensorStates = (self.states.armed, self.states.trippedCountdown, self.states.tripped)
 		
 		def sensorAction(location, logger):
 			cst = self.currentState
 			level = logging.INFO if cst in activeSensorStates else logging.DEBUG
 			logger.log(level, 'detected motion: ' + location)
 			if cst == self.states.armed:
-				self.selectState(_SIGNALS.TRIGGER)
+				self.selectState(_SIGNALS.TRIP)
 
 		def videoAction(location, logger, pin):
 			sensorAction(location, logger)
@@ -327,7 +327,7 @@ class StateMachine:
 			entry = 'door closed' if closed else 'door opened'
 			logger.log(level, entry)
 			if not closed and cst == self.states.armed or cst == self.states.locked:
-				self.selectState(_SIGNALS.TRIGGER)
+				self.selectState(_SIGNALS.TRIP)
 
 		# start non-managed threads (we forget about these because they can exit with no cleanup)
 		startMotionSensor(5, 'Nate\'s room', sensorAction)
