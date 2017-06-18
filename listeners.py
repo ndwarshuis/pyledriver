@@ -43,6 +43,16 @@ class KeypadListener:
 		wrongPassSound = soundLib.soundEffects['wrongPass']
 		backspaceSound = soundLib.soundEffects['backspace']
 		
+		def checkPasswd(action):
+			if self._buf == '':
+				ctrlKeySound.play()
+			elif self._buf == passwd:
+				self.resetBuffer()
+				action()
+			else:
+				self.resetBuffer()
+				wrongPassSound.play()
+		
 		def getInput():
 			while 1:
 				select([self._dev], [], [])
@@ -51,9 +61,8 @@ class KeypadListener:
 						
 						# numeral input
 						if event.code in numKeys:
-							if stateMachine.currentState != stateMachine.states.disarmed:
-								self._buf = self._buf + numKeys[event.code]
-								self._startResetTimer()
+							self._buf = self._buf + numKeys[event.code]
+							self._startResetTimer()
 							numKeySound.play()
 
 						# ctrl input
@@ -65,29 +74,19 @@ class KeypadListener:
 								if stateMachine.currentState == stateMachine.states.disarmed:
 									ctrlKeySound.play()
 								else:
-									if self._buf == '':
-										ctrlKeySound.play()
-									elif self._buf == passwd:
-										self.resetBuffer()
-										stateMachine.DISARM()
-									else:
-										self.resetBuffer()
-										wrongPassSound.play()
+									checkPasswd(stateMachine.DISARM)
 
 							# lock
 							elif val == 'NUML':
-								self.resetBuffer()
-								stateMachine.LOCK()
+								checkPasswd(stateMachine.LOCK)
 
 							# instant lock
 							elif val == '/':
-								self.resetBuffer()
-								stateMachine.INSTANT_LOCK()
+								checkPasswd(stateMachine.INSTANT_LOCK)
 								
 							# arm
 							elif val == '*':
-								self.resetBuffer()
-								stateMachine.ARM()
+								checkPasswd(stateMachine.ARM)
 								
 							# delete last char in buffer
 							elif val == 'BS':
