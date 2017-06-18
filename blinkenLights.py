@@ -26,10 +26,9 @@ class Blinkenlights(ExceptionThread):
 			pwm.start(0)
 			while not self._stopper.isSet():
 				if self._blink.is_set():
-					t = self._sleeptime
 					for dc in chain(range(100, -1, -5), range(0, 101, 5)):
 						pwm.ChangeDutyCycle(dc)
-						time.sleep(t)
+						time.sleep(self._sleeptime)
 				else:
 					pwm.ChangeDutyCycle(100)
 					self._blink.wait()			
