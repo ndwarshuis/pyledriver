@@ -223,7 +223,7 @@ class StateMachine:
 			),
 			_State(
 				name = 'armed',
-				entryCallbacks = [partial(triangleBlink, 1)],
+				entryCallbacks = [partial(triangleBlink, 2)],
 				sound = sfx['armed']
 			),
 			_State(
@@ -245,7 +245,7 @@ class StateMachine:
 			),
 			_State(
 				name = 'tripped',
-				entryCallbacks = [partial(triangleBlink, 0.5), intruderAlert],
+				entryCallbacks = [partial(triangleBlink, 1), intruderAlert],
 				sound = sfx['tripped']
 			)
 		]
