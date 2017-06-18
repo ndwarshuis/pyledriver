@@ -10,10 +10,15 @@ from itertools import chain
 logger = logging.getLogger(__name__)
 
 class Blinkenlights(ExceptionThread):
+	'''
+	Controls one LED on a GPIO pin. LED brightness can be control via
+	pulse-width modulation (pwm) and can be set to a constant brightness or 
+	fluctuate as a triangle wave or square wave, each with varying periods.
+	'''
 	def __init__(self, pin, cyclePeriod=2):
 		self._stopper = Event()
 		self._blink = Event()
-		self._linear = Event()
+		self._triangle = Event()
 		
 		# number of pwm adjustments madeper duty cycle, note stepsize is in half
 		# because we spend first half of period decreasing duty cycle and the
@@ -28,9 +33,15 @@ class Blinkenlights(ExceptionThread):
 		GPIO.setup(pin, GPIO.OUT)
 		pwm = GPIO.PWM(self._pin, 60)
 		
-		def linearLoop():
+		def triangleLoop():
+			'''
+			Controls the brightness in triangle-wave mode. Note that this will
+			exit as soon as _triangle or _blink events are cleared...this may
+			seem convoluted but is necessary to ensure clean response times
+			when the mode is changed
+			'''
 			for dc in chain(range(100, -1, -self._stepsize), range(0, 101, self._stepsize)):
-				t = (self._linear.is_set(), self._blink.is_set())
+				t = (self._triangle.is_set(), self._blink.is_set())
 				if t == (True, True):
 					pwm.ChangeDutyCycle(dc)
 					time.sleep(self._sleeptime)
@@ -39,28 +50,39 @@ class Blinkenlights(ExceptionThread):
 			return (True, True)
 		
 		def blinkLights():
+			'''
+			Uses mode to control brightness. This function has three phases in
+			its lifetime:
+			1) start PWM on the GPIO pin
+			2) brightness control loop, which exits on setting _stopper event
+			3) stop PWM (if this doesn't happen we segfault)
+			
+			Within the brightness control loop, flow is controled by events,
+			which ensure good response times when we transition b/t states as
+			well as high cpu efficiency (no busy waits).
+			'''
 			pwm.start(0)
 			while not self._stopper.isSet():
 				if self._blink.is_set():
-					linearSet, blinkSet = linearLoop()
+					triangleSet, blinkSet = triangleLoop()
 					
 					if not blinkSet:
 						continue
-					elif not linearSet:
+					elif not triangleSet:
 						t = self._sleeptime*self._steps/2
 					
 						pwm.ChangeDutyCycle(100)
-						self._linear.wait(timeout=t)
+						self._triangle.wait(timeout=t)
 						
-						if self._linear.is_set() or not self._blink.is_set():
+						if self._triangle.is_set() or not self._blink.is_set():
 							continue
 							
 						pwm.ChangeDutyCycle(0)
-						self._linear.wait(timeout=t)
+						self._triangle.wait(timeout=t)
 				else:
 					pwm.ChangeDutyCycle(100)
 					self._blink.wait()			
-			pwm.stop() # required to avoid core dumps when process terminates
+			pwm.stop()
 
 		super().__init__(target=blinkLights, daemon=True)
 		
@@ -72,25 +94,25 @@ class Blinkenlights(ExceptionThread):
 		if self.is_alive():
 			self._stopper.set()
 			self._blink.set()
-			self._linear.set()
+			self._triangle.set()
 			logger.debug('Stopping LED on pin %s', self._pin)
 
 	def setCyclePeriod(self, cyclePeriod):
 		self._sleeptime = cyclePeriod/self._steps
 			
-	def setLinear(self, toggle):
+	def setTriangle(self, toggle):
 		if toggle:
-			self._linear.set()
+			self._triangle.set()
 		else:
-			self._linear.clear()
+			self._triangle.clear()
 
 	def setBlink(self, toggle):
 		if toggle:
 			self._blink.set()
-			# unblock the _linear Event if threads are waiting on it
-			if not self._linear.is_set():
-				self._linear.set()
-				self._linear.clear()
+			# unblock the _triangle Event if threads are waiting on it
+			if not self._triangle.is_set():
+				self._triangle.set()
+				self._triangle.clear()
 		else:
 			self._blink.clear()
 		

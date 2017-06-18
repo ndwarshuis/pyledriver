@@ -201,12 +201,12 @@ class StateMachine:
 		
 		def squareBlink(t):
 			LED.setBlink(True)
-			LED.setLinear(False)
+			LED.setTriangle(False)
 			LED.setCyclePeriod(t)
 			
-		def linearBlink(t):
+		def triangleBlink(t):
 			LED.setBlink(True)
-			LED.setLinear(True)
+			LED.setTriangle(True)
 			LED.setCyclePeriod(t)
 			
 		stateObjs = [
@@ -223,7 +223,7 @@ class StateMachine:
 			),
 			_State(
 				name = 'armed',
-				entryCallbacks = [partial(linearBlink, 1)],
+				entryCallbacks = [partial(triangleBlink, 1)],
 				sound = sfx['armed']
 			),
 			_State(
@@ -245,7 +245,7 @@ class StateMachine:
 			),
 			_State(
 				name = 'tripped',
-				entryCallbacks = [partial(linearBlink, 0.5), intruderAlert],
+				entryCallbacks = [partial(triangleBlink, 0.5), intruderAlert],
 				sound = sfx['tripped']
 			)
 		]
