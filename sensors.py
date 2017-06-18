@@ -1,3 +1,6 @@
+'''
+IR and magnetic sensors
+'''
 import RPi.GPIO as GPIO
 import logging, time
 from functools import partial
@@ -14,6 +17,15 @@ logger.setLevel(logging.INFO)
 INIT_DELAY = 60
 
 def _lowPassFilter(pin, targetVal, period=0.001):
+	'''
+	Crude implementation of an LPF for a binary signal. This exists to filter
+	out voltage spikes that are induced by mains current fuctuations.
+	
+	Basically uses a timed loop to determine if a pin is changing within a
+	given period. If a change occurs within period, this is considered 'high
+	frequency' and the function returns False. If not, the pin is evaluated with
+	a target value, which returns a boolean	result that can be used elsewhere
+	'''
 	divisions = 10
 	sleepTime = period/divisions
 	
