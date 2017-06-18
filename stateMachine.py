@@ -194,11 +194,21 @@ class StateMachine:
 			if self._timer.is_alive():
 				self._timer.stop()
 				self._timer = None
-
-		LED = self._addManaged(Blinkenlights(17))
-		blinkingLED = partial(LED.setBlink, True)
+				
 		sfx = self.soundLib.soundEffects
-
+				
+		LED = self._addManaged(Blinkenlights(17))
+		
+		def squareBlink(t):
+			LED.setBlink(True)
+			LED.setLinear(False)
+			LED.setCyclePeriod(t)
+			
+		def linearBlink(t):
+			LED.setBlink(True)
+			LED.setLinear(True)
+			LED.setCyclePeriod(t)
+			
 		stateObjs = [
 			_State(
 				name = 'disarmed',
@@ -207,35 +217,35 @@ class StateMachine:
 			),
 			_State(
 				name = 'disarmedCountdown',
-				entryCallbacks = [blinkingLED, partial(startTimer, 30, sfx['disarmedCountdown'])],
+				entryCallbacks = [partial(squareBlink, 1), partial(startTimer, 30, sfx['disarmedCountdown'])],
 				exitCallbacks = [stopTimer],
 				sound = sfx['disarmedCountdown']
 			),
 			_State(
 				name = 'armed',
-				entryCallbacks = [blinkingLED],
+				entryCallbacks = [partial(linearBlink, 2)],
 				sound = sfx['armed']
 			),
 			_State(
 				name = 'lockedCountdown',
-				entryCallbacks = [blinkingLED, partial(startTimer, 30, sfx['disarmedCountdown'])],
+				entryCallbacks = [partial(squareBlink, 1), partial(startTimer, 30, sfx['disarmedCountdown'])],
 				exitCallbacks = [stopTimer],
 				sound = sfx['disarmedCountdown']
 			),
 			_State(
 				name = 'locked',
-				entryCallbacks = [blinkingLED],
+				entryCallbacks = [partial(linearBlink, 3)],
 				sound = sfx['armed']
 			),
 			_State(
 				name = 'armedCountdown',
-				entryCallbacks = [blinkingLED, partial(startTimer, 30, sfx['armedCountdown'])],
+				entryCallbacks = [partial(squareBlink, 1), partial(startTimer, 30, sfx['armedCountdown'])],
 				exitCallbacks = [stopTimer],
 				sound = sfx['armedCountdown']
 			),
 			_State(
 				name = 'triggered',
-				entryCallbacks = [blinkingLED, intruderAlert],
+				entryCallbacks = [partial(linearBlink, 1), intruderAlert],
 				sound = sfx['triggered']
 			)
 		]
