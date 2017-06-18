@@ -95,10 +95,12 @@ class SoundLib:
 		mixer.init()
 		
 		self.soundEffects = {
-			'disarmedCountdown':	SoundEffect(path='soundfx/smb_coin.wav'),
+			'disarmedCountdown':	SoundEffect(path='soundfx/smb_kick.wav'),
 			'disarmed':				SoundEffect(path='soundfx/smb_pause.wav'),
 			'armed':				SoundEffect(path='soundfx/smb_powerup.wav'),
-			'armedCountdown':		SoundEffect(path='soundfx/smb_jump-small.wav'),
+			'armedCountdown':		SoundEffect(path='soundfx/smb2_door_appears.wav'),
+			'locked':				SoundEffect(path='soundfx/smb_1-up.wav'),
+			'lockedCountdown':		SoundEffect(path='soundfx/smb_stomp.wav'),
 			'triggered':			SoundEffect(path='soundfx/alarms/burgler_alarm.ogg', volume=1.0, loops=-1),
 			'door':					SoundEffect(path='soundfx/smb_pipe.wav'),
 			'numKey':				SoundEffect(path='soundfx/smb_bump.wav'),

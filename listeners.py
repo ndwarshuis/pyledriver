@@ -24,7 +24,7 @@ class KeypadListener:
 	- countdown timer to reset the input buffer after 30 seconds of inactivity
 	'''
 	def __init__(self, stateMachine, passwd):
-		
+
 		ctrlKeys = { 69: 'NUML', 98: '/', 55: '*', 14: 'BS', 96: 'ENTER'}
 		
 		volKeys = { 74: '-', 78: '+', 83: '.'}
@@ -69,7 +69,7 @@ class KeypadListener:
 										ctrlKeySound.play()
 									elif self._buf == passwd:
 										self.resetBuffer()
-										stateMachine.DISARM
+										stateMachine.DISARM()
 									else:
 										self.resetBuffer()
 										wrongPassSound.play()
@@ -77,20 +77,17 @@ class KeypadListener:
 							# lock
 							elif val == 'NUML':
 								self.resetBuffer()
-								stateMachine.LOCK
-								ctrlKeySound.play()
+								stateMachine.LOCK()
 
 							# instant lock
 							elif val == '/':
 								self.resetBuffer()
-								stateMachine.INSTANT_LOCK
-								ctrlKeySound.play()
+								stateMachine.INSTANT_LOCK()
 								
 							# arm
 							elif val == '*':
 								self.resetBuffer()
-								stateMachine.ARM
-								ctrlKeySound.play()
+								stateMachine.ARM()
 								
 							# delete last char in buffer
 							elif val == 'BS':

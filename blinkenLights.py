@@ -19,7 +19,7 @@ class Blinkenlights(ExceptionThread):
 		# because we spend first half of period decreasing duty cycle and the
 		# second half increasing (between 0 and 100)
 		self._steps = 40
-		self._stepsize = 100/(self._steps/2)
+		self._stepsize = int(100/(self._steps/2))
 	
 		self._pin = pin
 		
@@ -47,7 +47,7 @@ class Blinkenlights(ExceptionThread):
 					if not blinkSet:
 						continue
 					elif not linearSet:
-						t = self._sleeptime*self._stepsize
+						t = self._sleeptime*self._steps/2
 					
 						pwm.ChangeDutyCycle(100)
 						self._linear.wait(timeout=t)

@@ -167,7 +167,7 @@ class StateMachine:
 		# add signals to self to avoid calling partial every time
 		for sig in _SIGNALS:
 			setattr(self, sig.name, partial(self.selectState, sig))
-		
+
 		secretTable = {
 			'dynamoHum': self.DISARM,
 			'zombyWoof': self.ARM,
@@ -223,19 +223,19 @@ class StateMachine:
 			),
 			_State(
 				name = 'armed',
-				entryCallbacks = [partial(linearBlink, 2)],
+				entryCallbacks = [partial(linearBlink, 1)],
 				sound = sfx['armed']
 			),
 			_State(
 				name = 'lockedCountdown',
-				entryCallbacks = [partial(squareBlink, 1), partial(startTimer, 30, sfx['disarmedCountdown'])],
+				entryCallbacks = [partial(squareBlink, 1), partial(startTimer, 30, sfx['lockedCountdown'])],
 				exitCallbacks = [stopTimer],
-				sound = sfx['disarmedCountdown']
+				sound = sfx['lockedCountdown']
 			),
 			_State(
 				name = 'locked',
-				entryCallbacks = [partial(linearBlink, 3)],
-				sound = sfx['armed']
+				entryCallbacks = [partial(squareBlink, 2)],
+				sound = sfx['locked']
 			),
 			_State(
 				name = 'armedCountdown',
@@ -245,7 +245,7 @@ class StateMachine:
 			),
 			_State(
 				name = 'triggered',
-				entryCallbacks = [partial(linearBlink, 1), intruderAlert],
+				entryCallbacks = [partial(linearBlink, 0.5), intruderAlert],
 				sound = sfx['triggered']
 			)
 		]
