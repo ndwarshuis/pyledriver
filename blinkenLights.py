@@ -72,9 +72,8 @@ class Blinkenlights(ExceptionThread):
 						t = self._sleeptime*self._steps/2
 					
 						pwm.ChangeDutyCycle(100)
-						self._triangle.wait(timeout=t)
 						
-						if self._triangle.is_set() or not self._blink.is_set():
+						if self._triangle.wait(timeout=t) or not self._blink.is_set():
 							continue
 							
 						pwm.ChangeDutyCycle(0)
