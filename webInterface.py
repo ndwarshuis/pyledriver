@@ -1,5 +1,5 @@
 import logging
-from subprocess import check_output, CalledProcessError
+from subprocess import check_output, CalledProcessError, run, PIPE
 from flask import Flask, render_template, Response, Blueprint, redirect, url_for
 from flask_wtf import FlaskForm
 from wtforms.fields import StringField, SubmitField
@@ -16,8 +16,20 @@ werkzeug.setLevel(logging.ERROR)
 class TTSForm(FlaskForm):
 	tts = StringField(validators=[InputRequired()])
 	submitTTS = SubmitField('Speak')
+	
+class JanusRestart(FlaskForm):
+	submitRestart = SubmitField('Restart Janus')
 
 # TODO: fix random connection fails (might be an nginx thing)
+
+def janusRunning():
+	try:
+		check_output(['pidof', 'janus'])
+	except CalledProcessError:
+		logger.warning('Janus not running')
+		return False
+	else:
+		return True
 
 @async(daemon=True)
 def startWebInterface(stateMachine):
@@ -27,22 +39,25 @@ def startWebInterface(stateMachine):
 	@siteRoot.route('/index', methods=['GET', 'POST'])
 	def index():
 		ttsForm = TTSForm()
+		janusRestart = JanusRestart()
 		
 		if ttsForm.validate_on_submit() and ttsForm.submitTTS.data:
 			stateMachine.soundLib.speak(ttsForm.tts.data)
+			return redirect(url_for('siteRoot.index'))
+		elif janusRestart.validate_on_submit():
+			logger.info('Restarting Janus')
+			run(['systemctl', 'restart', 'janus'], stdout=PIPE, stderr=PIPE)
 			return redirect(url_for('siteRoot.index'))
 
 		return render_template(
 			'index.html',
 			ttsForm=ttsForm,
-			state=stateMachine.currentState
+			state=stateMachine.currentState,
+			janusRunning=janusRunning(),
+			janusRestart=janusRestart
 		)
-
-	try:
-		check_output(['pidof', 'janus'])
-	except CalledProcessError:
-		logger.error('Janus not running. Aborting')
-		raise SystemExit
+		
+	janusRunning()
 
 	app = Flask(__name__)
 	app.secret_key = '3276d68dac56985bea352325125641ff'

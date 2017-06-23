@@ -14,8 +14,10 @@
 	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/bootbox.js/4.1.0/bootbox.min.js"></script>
 	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/spin.js/2.3.2/spin.min.js"></script>
 
-	<script type="text/javascript" src="{{ url_for('siteRoot.static', filename='janus.js') }}"></script>
-	<script type="text/javascript" src="{{ url_for('siteRoot.static', filename='streamingtest.js') }}"></script>
+	{% if janusRunning %}
+	  <script type="text/javascript" src="{{ url_for('siteRoot.static', filename='janus.js') }}"></script>
+	  <script type="text/javascript" src="{{ url_for('siteRoot.static', filename='streamingtest.js') }}"></script>
+	{% endif %}
 </head>
 
 <body>
@@ -39,33 +41,34 @@
 						</div>
 					</form>
 				</ul>
-				<ul class="nav navbar-nav navbar-right">
-					<li class="dropdown">
-						<a id="streamset" class="dropdown-toggle" data-toggle="dropdown">
-							Pick Stream<span class="caret"></span>
-						</a>
-						<ul id="streamslist" class="dropdown-menu" role="menu"></ul>
-					</li>
-					<button class="btn btn-default navbar-btn" autocomplete="off" id="watch">Start</button>
-				</ul>
+				{% if janusRunning %}
+				  <ul class="nav navbar-nav navbar-right">
+					  <li class="dropdown">
+						  <a id="streamset" class="dropdown-toggle" data-toggle="dropdown">
+							  Pick Stream<span class="caret"></span>
+						  </a>
+						  <ul id="streamslist" class="dropdown-menu" role="menu"></ul>
+					  </li>
+					  <button class="btn btn-default navbar-btn" autocomplete="off" id="watch">Start</button>
+				  </ul>
+				{% endif %}
 			</div>
 		</div>
 	</div>
 	<div class="container-fluid body-content">
-				<div class="col-md-6">
-<!--
-					<div class="panel panel-default">
-						<div class="panel-heading">
-							<h3 class="panel-title">Stream <span class="label label-info hide" id="status"></h3>
-						</div>
--->
-						<div id="stream"></div>
-						<p class="hide" id="status">
-<!--
-					</div>
--->
-		</div>
-	</div>
+      <div class="col-md-6">
+		{% if janusRunning %}
+          <div id="stream"></div>
+          <p class="hide" id="status">
+		{% else %}
+          <p>Janus not running. Streaming not available.</p>
+          <form action="{{ url_for('siteRoot.index') }}" method="post" name="janus_running" class="navbar-form" role="search">
+            {{ janusRestart.hidden_tag() }}
+            {{ janusRestart.submitRestart(class_="btn btn-default") }}
+          </form>
+		{% endif %}
+      </div>
+    </div>
 </body>
 
 </html>
