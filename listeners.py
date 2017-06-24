@@ -43,10 +43,14 @@ class KeypadListener:
 		wrongPassSound = soundLib.soundEffects['wrongPass']
 		backspaceSound = soundLib.soundEffects['backspace']
 		
+		if not isinstance(passwd, int):
+			logger.error('KeyPasswd must be int. Check configuration')
+			raise SystemExit
+		
 		def checkPasswd(action):
 			if self._buf == '':
 				ctrlKeySound.play()
-			elif self._buf == passwd:
+			elif self._buf == str(passwd):
 				self.resetBuffer()
 				action()
 			else:

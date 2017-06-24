@@ -179,7 +179,7 @@ class StateMachine:
 	
 		self._addManaged(PipeListener(callback=secretCallback, name='secret'))
 
-		self._addManaged(KeypadListener(stateMachine=self, passwd='5918462'))
+		self._addManaged(KeypadListener(stateMachine=self, passwd=configFile['keyPasswd']))
 		
 		def startTimer(t, sound):
 			self._timer = _CountdownTimer(t, self.TIMOUT, sound)

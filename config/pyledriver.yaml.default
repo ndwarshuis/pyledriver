@@ -14,3 +14,4 @@ secretTable:
   INSTANT_ARM: rudess
   LOCK: myung
   INSTANT_LOCK: portnoy
+keyPasswd: 123456
