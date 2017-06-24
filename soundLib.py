@@ -2,6 +2,7 @@
 Implements all sound functionality
 '''
 import logging, os, hashlib, queue, time, psutil
+from config import stateFile
 from threading import Event, RLock
 from exceptionThreading import ExceptionThread, async
 from pygame import mixer
@@ -112,7 +113,7 @@ class SoundLib:
 		self._ttsSounds = TTSCache(psutil.virtual_memory().total * 0.001)
 		self._lock = RLock()
 		
-		self.volume = 100
+		self.volume = stateFile['volume']
 		self._applyVolumesToSounds(self.volume)
 		
 		self._ttsQueue = queue.Queue()
@@ -174,6 +175,7 @@ class SoundLib:
 	def _applyVolumesToSounds(self, volume):
 		with self._lock:
 			self.volume = volume
+			stateFile['volume'] = volume
 			v = volume/100
 			s = self.soundEffects
 			for name, sound in s.items():

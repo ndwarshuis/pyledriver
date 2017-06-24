@@ -36,7 +36,7 @@ class KeypadListener:
 			82: '0'
 		}
 		
-		soundLib = stateMachine.soundLib
+		self._soundLib = soundLib = stateMachine.soundLib
 		
 		numKeySound = soundLib.soundEffects['numKey']
 		ctrlKeySound = soundLib.soundEffects['ctrlKey']
@@ -56,7 +56,7 @@ class KeypadListener:
 			else:
 				self.resetBuffer()
 				wrongPassSound.play()
-		
+				
 		def getInput():
 			while 1:
 				select([self._dev], [], [])
@@ -115,7 +115,7 @@ class KeypadListener:
 								soundLib.mute()
 
 							ctrlKeySound.play()
-							self._dev.set_led(ecodes.LED_NUML, 0 if soundLib.volume > 0 else 1)
+							self._setLED()
 		
 		self._listener = ExceptionThread(target=getInput, daemon=True)
 		self._clearBuffer()
@@ -127,6 +127,7 @@ class KeypadListener:
 
 		self._dev = InputDevice(devPath)
 		self._dev.grab()
+		self._setLED()
 		
 		self._listener.start()
 		logger.debug('Started keypad listener')
@@ -158,6 +159,9 @@ class KeypadListener:
 		
 	def _clearBuffer(self):
 		self._buf = ''
+		
+	def _setLED(self):
+		self._dev.set_led(ecodes.LED_NUML, 0 if self._soundLib.volume > 0 else 1)
 		
 	def __del__(self):
 		self.stop()
