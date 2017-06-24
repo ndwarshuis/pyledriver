@@ -8,3 +8,9 @@ gluster:
   volume: pyledriver
   mountpoint: /mnt/glusterfs/pyledriver
   options: backupvolfile-server=example.com
+secretTable:
+  DISARM: labrie
+  ARM: petrucci
+  INSTANT_ARM: rudess
+  LOCK: myung
+  INSTANT_LOCK: portnoy

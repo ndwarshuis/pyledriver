@@ -16,7 +16,7 @@ from functools import partial
 from collections import namedtuple
 
 from exceptionThreading import ExceptionThread
-from config import stateFile
+from config import configFile, stateFile
 from sensors import startDoorSensor, startMotionSensor
 from gmail import intruderAlert
 from listeners import KeypadListener, PipeListener
@@ -168,13 +168,7 @@ class StateMachine:
 		for sig in _SIGNALS:
 			setattr(self, sig.name, partial(self.selectState, sig))
 
-		secretTable = {
-			'dynamoHum': self.DISARM,
-			'zombyWoof': self.ARM,
-			'imTheSlime': self.INSTANT_ARM,
-			'fiftyFifty': self.LOCK,
-			'dentalFloss': self.INSTANT_LOCK
-		}
+		secretTable = {secret: getattr(self, signal) for signal, secret in configFile['secretTable'].items()}
 		
 		def secretCallback(secret, logger):
 			if secret in secretTable:
