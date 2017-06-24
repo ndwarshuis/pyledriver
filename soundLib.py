@@ -226,8 +226,11 @@ class SoundLib:
 	def _stopMonitor(self):
 		self._stopper.set()
 		self._ttsQueue.put_nowait(self._sentinel)
-		self._thread.join()
-		self._thread = None
+		try:
+			self._thread.join()
+			self._thread = None
+		except AttributeError:
+			pass
 		logger.debug('Stopping TTS Queue Monitor')
 
 	def __del__(self):
