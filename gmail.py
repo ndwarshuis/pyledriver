@@ -14,7 +14,7 @@ def _getNextDate():
 	m = datetime.now().month + 1
 	y = datetime.now().year
 	y = y + 1 if m > 12 else y
-	return datetime(year=y, month=m%12, day=1, hour=12, minute=0)
+	return datetime(year=y, month=((m-1)%12)+1, day=1, hour=12, minute=0)
 
 @async(daemon=True)
 def _scheduleAction(action):
