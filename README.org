@@ -1,0 +1,11 @@
+Home security system to be run on raspberry pi 3.
+
+* features
+- 5 ir sensors
+- magnetic door sensor
+- upload to external server using glusterfs
+- Super Mario(TM) soundfx 
+- web interface
+  - tts engine (to tell intruders to gtfo :D )
+  - audio/video feed (using janus gateway with hardware-accel OMX/gstreamer backend)
+  
