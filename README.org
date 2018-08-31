@@ -6,6 +6,6 @@ Home security system to be run on raspberry pi 3.
 - upload to external server using glusterfs
 - Super Mario(TM) soundfx 
 - web interface
-  - tts engine (to tell intruders to gtfo :D )
+  - text-to-speech engine
   - audio/video feed (using janus gateway with hardware-accel OMX/gstreamer backend)
   
