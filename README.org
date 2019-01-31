@@ -21,6 +21,8 @@ Clone this repository
 #+BEGIN_SRC sh
 git clone git@github.com:ndwarshuis/pyledriver.git
 #+END_SRC
+*** Initialization
+Run =main.py= as root
 *** Dependencies
 Python libraries
 - python-evdev
