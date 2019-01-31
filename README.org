@@ -1,11 +1,49 @@
+* Pyledriver
 Home security system to be run on raspberry pi 3.
 
-* features
-- 5 ir sensors
-- magnetic door sensor
-- upload to external server using glusterfs
-- Super Mario(TM) soundfx 
-- web interface
-  - text-to-speech engine
-  - audio/video feed (using janus gateway with hardware-accel OMX/gstreamer backend)
-  
+** Motivation
+This is a (slightly overengineered?) solution to a common problem with living in a big city. While it could probably do a decent job a securing an appartment or home (untested because our specific apartment has not been looted yet), it was also an excellent learning experience for a variety of frameworks (Flask, GStreamer, glusterFS) and programming concepts (multithreading, state machines, event-driven callbacks, video accelaration).
+** Detection and Countermeasures
+The pyledriver security system is equiped with five IR motion sensors and a magnetic door sensor. These are managed using the excellent =RPi.GPIO= library. It also features a USB camera input with both audio and video (OpenMAX accelarated h.264 and opus codecs respectively) which are multiplexed using Gstreamer. 
+
+If armed, triggering any of the IR or door sensors will trigger a countdown. If the password is not entered within the countdown, an alarm will sound, and email will be sent to appropriate parties, and the camera will begin recording. The video can be saved to a glusterFS-backed directory so the files can be uploaded to a remote server and thus preserve the evidence in case the intruder finds the Pyledriver and smashes it.
+** Interface
+- USB touchpad for password input
+- Web interface to display video and and operate a text-to-speech engine (to yell at intruders or scare roommates)
+- linux socket for remote control via ssh
+** Design
+The core of the Pyledriver Security System is a statemachine object to represent the disarmed, armed, triggered, and counting-down states. There are separate threads for each sensor and the USB keypad input, which asynchronously modify the state of the state machine. Each state transition has a set of callbacks that trigger alarms, make the lights blink, send emails, etc. There is also a separate thread that listens on a linux socket for commands that can trigger state changes.
+
+The web interface is implemented in Flask and displays the video as well as provides a text input box to control the Text to speech engine (implemented in espeak).
+** Installation
+Clone this repository
+
+#+BEGIN_SRC sh
+git clone git@github.com:ndwarshuis/pyledriver.git
+#+END_SRC
+*** Dependencies
+Python libraries
+- python-evdev
+- python-flask
+- python-flask-wtf
+- python-numpy
+- python-psutil
+- python-pyaudio
+- python-pygame
+- python-pyinotify
+- python-raspberry-gpio
+- python-requests
+- python-yaml
+- gst-python
+
+Linux libraries
+- glusterfs
+- gstreamer (base and good)
+- gst-omx
+- espeak
+*** Configuration
+There is a default configuration file in =config/pyledriver.yaml.default=. Modify options here as desired.
+** Future Plans
+- make web interface multi-threaded (now cannot operate text-to-speech and watch the video simultaneously, which makes it hard to yell at intruders)
+- make espeak sound like GLaDOS
+- add party mode (which really means make salsa version of "Still Alive" loop forever)
